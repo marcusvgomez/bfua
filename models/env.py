@@ -52,9 +52,17 @@ class env:
             offset = STATE_DIM*self.num_agents
             for j in range(self.num_landmarks):
                 row[offset + STATE_DIM*j: offset + STATE_DIM*(j+1)] = self.world_state_landmarks[:,j] - self.world_state_agents[:,i]
+		
+		##gaze is always technically 0, so unsure if that means i should make it constant
+		##this is probably the right thing to do, but leaving it uncommented for now
+		##we can use their visualization script to see what's happening lol
+		"""
                 row[offset + STATE_DIM*j + 6] = 0.0
                 row[offset + STATE_DIM*j + 7] = 0.0
                 row[offset + STATE_DIM*j + 8] = 0.0
+		"""
+
+		##color is constant and not relative
                 row[offset + STATE_DIM*j + 9] = self.world_state_landmarks[9,j]
                 row[offset + STATE_DIM*j + 10] = self.world_state_landmarks[10,j]
                 row[offset + STATE_DIM*j + 11] = self.world_state_landmarks[11,j]
