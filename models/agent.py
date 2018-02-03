@@ -16,12 +16,15 @@ import torch.autograd as autograd
 import torch.nn.init as init
 from torch.nn.parameter import Parameter
 
+from torch.distributions import Categorical
+
+
 
 
 class agent(nn.Module):
 	def __init__(self, num_agents, vocab_size,
-				 input_space, hidden_comm_size, comm_output_size,
-				 input_size, hidden_input_size, input_output_size,
+				 input_size, hidden_comm_size, comm_output_size,
+				 hidden_input_size, input_output_size,
 				 hidden_output_size,
 				 memory_size = 32, goal_size = 3, is_cuda = False, dropout_prob = 0.1):
 		super(agent, self).__init__()
@@ -31,13 +34,15 @@ class agent(nn.Module):
 		self.input_size = input_size
 		self.dropout_prob = dropout_prob
 
-		self.com_FC1 = nn.linear(vocab_size + memory_size, hidden_comm_size)
-		self.com_FC2 = nn.linear(hidden_comm_size, comm_output_size)
+		print ("vocab size is: ", self.vocab_size + input_size)
 
-		self.input_FC1 = nn.linear(input_size, hidden_input_size)
-		self.input_FC2 = nn.linear(hidden_input_size, input_output_size)
+		self.com_FC1 = nn.Linear(vocab_size + memory_size, hidden_comm_size)
+		self.com_FC2 = nn.Linear(hidden_comm_size, comm_output_size)
 
+		self.input_FC1 = nn.Linear(input_size, hidden_input_size)
+		self.input_FC2 = nn.Linear(hidden_input_size, input_output_size)
 
+		print ("size is: ", input_output_size + comm_output_size + goal_size + memory_size)
 		self.outputFC_1 = nn.Linear(input_output_size + comm_output_size + goal_size + memory_size, hidden_output_size)
 		self.outputFC_2 = nn.Linear(hidden_output_size, input_size + vocab_size)
 
@@ -45,6 +50,8 @@ class agent(nn.Module):
 		self.elu = nn.ELU()
 		self.dropout = nn.Dropout(dropout_prob)
 		self.softmax = nn.Softmax()
+
+		self.embeddings = nn.Embedding(vocab_size, vocab_size)
 
 		if is_cuda:
 			self.initializeCuda()
@@ -61,7 +68,7 @@ class agent(nn.Module):
 	def forward(self, inputs):
 		X, C, g, M, m = inputs
 
-		nm, _ = X.shape
+		# nm, _ = X.shape
 
 		communication_input = torch.cat([C, M], 1) #concatenate along the first direction
 
@@ -69,21 +76,30 @@ class agent(nn.Module):
 		comm_out = self.forwardFC(hidden_comm, self.elu, self.com_FC2, self.dropout)
 		comm_pool = self.softmaxPool(comm_out)
 
+
 		loc_hidden = self.forwardFC(X, self.elu, self.input_FC1, self.dropout)
 		loc_output = self.forwardFC(loc_hidden, self.elu, self.input_FC2, self.dropout)
 		loc_pool = self.softmaxPool(loc_output)
 
+
 		#concatenation of pooled communication, location, goal, and memory
-		output_input = torch.cat([comm_pool, g, loc_pool, m], 1)
+		output_input = torch.cat([comm_pool, g, loc_pool, m], 0)
 		output_hidden = self.forwardFC(output_input, self.elu, self.outputFC_1, self.dropout)
-		output = self.forwardFC(output_hidden, self.elu, self.outputFC_1, self.dropout)
+		output = self.forwardFC(output_hidden, self.elu, self.outputFC_2, self.dropout)
+
+		print (output)
 
 		psi_u, psi_c = output[:self.input_size], output[self.input_size:]
-		psi_c_log = psi_c.log()
+		print (psi_u, psi_c)
+		psi_c_log = self.softmax(psi_c)
 
 
+		m = Categorical(psi_c_log)
+		c_action = m.sample()
 
+		communication_output = self.embeddings(c_action)
 
+		return communication_output
 
 	'''
 	Runs a softmax pool which is taking the softmax for all entries
@@ -104,9 +120,9 @@ class agent(nn.Module):
 
 	# I need to check this code
 	def initializeCuda(self):
-		print "initializing Cuda"
+		# print "initializing Cuda"
 		for param in self.parameter:
-			print param
+			print (param)
 
 
 

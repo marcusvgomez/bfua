@@ -13,7 +13,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 
 from agent import agent
-from env import env
+from env import env, STATE_DIM
 
 dtype = torch.FloatTensor
 
@@ -42,8 +42,11 @@ class Controller():
         
         # each agent's observations of other agent/landmark locations from its 
         # own reference frame. TODO: probably not N+M for observations of all other objects
-        self.X = Variable(torch.randn(self.N, self.N+self.M).type(dtype), requires_grad=False)
-        self.C = Variable(torch.randn(self.N, self.K).type(dtype), requires_grad=True) # communication. one hot
+        # maybe X can just be a tensor and not a variable since it's not being trained
+        # can X get its initial value from env?
+        self.X = Variable(torch.randn(STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=False)
+        
+        self.C = Variable(torch.randn(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         
         # create memory bank Tensors??
         self.M = None
@@ -53,13 +56,7 @@ class Controller():
         
         self.loss = self.compute_loss()
         
-    
-    def set_landmark_states(self):
-        pass
-        
     def compute_loss(self):
-        # compute reward/loss. what is the formula they use again? will it be differentiable?
-        # how is this different from 'auxiliary reward'
         pass
 
     def specify_goals(self):
@@ -69,20 +66,29 @@ class Controller():
         goals = Variable(torch.randn(self.N, self.GOAL_DIM).type(dtype), requires_grad=False)
         
         return goals
+    
+    def step(self):
+        # get the policy action/comms from passing it through the agent network
+        actions = self.agent.forward((self.X, self.C, self.g, self.M, self.m))
+        next_state = self.env.forward(actions)
+        self.X = next_state
         
-    def train(self, epochs=100):
-        self.agent.train() # set to training mode
+    
+    # # this is probably useless, ignore
+    # def train(self, epochs=100):
+    #     self.agent.train() # set to training mode
         
-        optimizer = optim.SGD(self.agent.parameters(), lr=0.01)
-        for _ in range(epochs): 
-            # have some sort of training point (data, target)
-            data, target = Variable(data), Variable(target)
+    #     optimizer = optim.SGD(self.agent.parameters(), lr=0.01)
+    #     for _ in range(epochs): 
+    #         # have some sort of training point (data, target)
+    #         # get the next data point by passing to the environment
+    #         data, target = Variable(data), Variable(target)
             
-            optimizer.zero_grad()   # zero the gradient buffers
-            output = self.agent(input_data)
-            loss = self.compute_loss()
-            loss.backward()
-            optimizer.step()    # Does the update
+    #         optimizer.zero_grad()   # zero the gradient buffers
+    #         output = self.agent(input_data)
+    #         loss = self.compute_loss()
+    #         loss.backward()
+    #         optimizer.step()    # Does the update
 
 def main():
     controller = Controller()
