@@ -45,6 +45,13 @@ class env:
         for i in range(self.num_agents):
             row = torch.FloatTensor(STATE_DIM*(self.num_agents + num_landmarks))
             for j in range(self.num_agents):
+                row[STATE_DIM*j:STATE_DIM*(j+1)] = self.world_state_agents[:,j] 
+            offset = STATE_DIM*self.num_agents
+            for j in range(self.num_landmarks):
+                row[offset + STATE_DIM*j: offset + STATE_DIM*(j+1)] = self.world_state_landmarks[:,j]
+
+            """
+            for j in range(self.num_agents):
                 row[STATE_DIM*j:STATE_DIM*(j+1)] = self.world_state_agents[:,j] - self.world_state_agents[:,i]
                 row[STATE_DIM*j + 6] = self.world_state_agents[6,j]
             offset = STATE_DIM*self.num_agents
@@ -54,15 +61,20 @@ class env:
 		##gaze is always technically 0, so unsure if that means i should make it constant
 		##this is probably the right thing to do, but leaving it uncommented for now
 		##we can use their visualization script to see what's happening lol
-		"""
-                row[offset + STATE_DIM*j + 6] = 0.0
-                row[offset + STATE_DIM*j + 7] = 0.0
-                row[offset + STATE_DIM*j + 8] = 0.0
-		"""
+		
+                #row[offset + STATE_DIM*j + 6] = 0.0
+                #row[offset + STATE_DIM*j + 7] = 0.0
+                #row[offset + STATE_DIM*j + 8] = 0.0
+		
 
 		##color is constant and not relative
                 row[offset + STATE_DIM*j + 6] = self.world_state_landmarks[6,j]
+            """
             result[:,i] = row
         return result
+
+    ##goals is 6 x N
+    def compute_physical_loss(self, goals):
+        pass
 
         
