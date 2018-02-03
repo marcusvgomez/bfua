@@ -9,8 +9,8 @@ state of the world.
 import torch
 
 R_DIM = 3
-STATE_DIM = R_DIM * 4# 3(for position) + 3(for velocity) + 3(for gaze) + 3(for color)
-ACTION_DIM = R_DIM * 2 # 3 (for velocity) + 3(for gaze)
+STATE_DIM = 7# 2(for position) + 2(for velocity) + 2(for gaze) + 1(for color)
+ACTION_DIM = 4 # 2 (for velocity) + 2(for gaze)
 
 class env:
     def __init__(self, num_agents, num_landmarks, timestep=0.1, damping_coef=0.5):
@@ -24,13 +24,13 @@ class env:
         
         ## this probably shouldn't be hardcoded but...whatever
         self.transform_L = torch.FloatTensor(STATE_DIM, STATE_DIM)
-        self.transform_L[0:3,0:3] = torch.eye(R_DIM)
-        self.transform_L[0:3,3:6] = self.timestep * torch.eye(R_DIM)
-        self.transform_L[3:6,3:6] = self.gamma * torch.eye(R_DIM)
-        self.transform_L[9:12,9:12] = torch.eye(R_DIM)
+        self.transform_L[0:2,0:2] = torch.eye(R_DIM)
+        self.transform_L[0:2,2:4] = self.timestep * torch.eye(R_DIM)
+        self.transform_L[2:4,2:4] = self.gamma * torch.eye(R_DIM)
+        self.transform_L[6,6] = torch.eye(1)
         self.transform_R = torch.FloatTensor(STATE_DIM, ACTION_DIM)
-        self.transform_R[3:6,0:3] = self.timestep * torch.eye(R_DIM)
-        self.transform_R[6:9,3:6] = torch.eye(R_DIM)
+        self.transform_R[2:4,0:2] = self.timestep * torch.eye(R_DIM)
+        self.transform_R[4:6,2:4] = torch.eye(R_DIM)
 
     def modify_world_state(self, agents, landmarks):
         pass
@@ -46,9 +46,7 @@ class env:
             row = torch.FloatTensor(STATE_DIM*(self.num_agents + num_landmarks))
             for j in range(self.num_agents):
                 row[STATE_DIM*j:STATE_DIM*(j+1)] = self.world_state_agents[:,j] - self.world_state_agents[:,i]
-                row[STATE_DIM*j + 9] = self.world_state_agents[9,j]
-                row[STATE_DIM*j + 10] = self.world_state_agents[10,j]
-                row[STATE_DIM*j + 11] = self.world_state_agents[11,j]
+                row[STATE_DIM*j + 6] = self.world_state_agents[6,j]
             offset = STATE_DIM*self.num_agents
             for j in range(self.num_landmarks):
                 row[offset + STATE_DIM*j: offset + STATE_DIM*(j+1)] = self.world_state_landmarks[:,j] - self.world_state_agents[:,i]
@@ -63,9 +61,7 @@ class env:
 		"""
 
 		##color is constant and not relative
-                row[offset + STATE_DIM*j + 9] = self.world_state_landmarks[9,j]
-                row[offset + STATE_DIM*j + 10] = self.world_state_landmarks[10,j]
-                row[offset + STATE_DIM*j + 11] = self.world_state_landmarks[11,j]
+                row[offset + STATE_DIM*j + 6] = self.world_state_landmarks[6,j]
             result[:,i] = row
         return result
 
