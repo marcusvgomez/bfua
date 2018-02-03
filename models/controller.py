@@ -18,12 +18,12 @@ from env import env, STATE_DIM
 dtype = torch.FloatTensor
 
 class Controller():
-    def __init__(self):
+    def __init__(self, runtime_config):
         # params. Could probably make this a global constant instead of instance variable
         # but this works too
-        self.N = 12
-        self.M = 3
-        self.K = 20 # vocabulary size
+        self.N = runtime_config.num_agents
+        self.M = runtime_config.num_landmarks
+        self.K = runtime_config.vocab_size # vocabulary size
         
         # the first 3 are one-hot for which action to perform go/look/nothing
         # Appendix 8.2: "Goal for agent i consists of an action to perform, a location to perform it on  r_bar, and an agent r that should perform that action"

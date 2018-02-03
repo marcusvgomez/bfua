@@ -13,6 +13,8 @@ def main():
     parser.add_argument('--load-model', type=str, help='Optional param that specifies model weights to start using')
     parser.add_argument('--save-model', type=str, help='Optional param that specifies where to save model weights')
     parser.add_argument('--vocab-size', type=int, help='Optinoal param that specifies maximum vocabulary size')
+    parser.add_argument('--num-agents', type=int, help='Optional param that specifies the number of agents')
+    parser.add_argument('--num-landmarks', type=int, help='Optional param that specifies the number of landmarks')
     args = vars(parser.parse_args())
     runtime_config = RuntimeConfig(args)
     controller = Controller()

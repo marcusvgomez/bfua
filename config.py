@@ -15,4 +15,6 @@ class RuntimeConfig:
         self.save_weights = True if 'save-model' in args else False
         self.save_weights_path = "" if 'save-model' not in args else args['save-model']
         self.vocab_size = 20 if 'vocab-size' not in args else args['vocab-size']
+        self.num_agents = 12 if 'num-agents' not in args else args['num-agents']
+        self.num_landmarks = 3 if 'num-landmarks' not in args else args['num-landmarks']
 
