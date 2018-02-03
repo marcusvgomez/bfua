@@ -10,6 +10,7 @@ the environment
 import numpy as np
 import torch
 from torch.autograd import Variable
+import torch.optim as optim
 
 from agent import agent
 from env import env
@@ -44,28 +45,49 @@ class Controller():
         self.X = Variable(torch.randn(self.N, self.N+self.M).type(dtype), requires_grad=False)
         self.C = Variable(torch.randn(self.N, self.K).type(dtype), requires_grad=True) # communication. one hot
         
-        
         # create memory bank Tensors??
         self.M = None
         
         # create goals
-        G = self.specify_goals()
+        self.G = self.specify_goals()
+        
+        self.loss = self.compute_loss()
         
     
     def set_landmark_states(self):
         pass
         
-    def compute_reward(self):
+    def compute_loss(self):
+        # compute reward/loss. what is the formula they use again? will it be differentiable?
+        # how is this different from 'auxiliary reward'
         pass
 
     def specify_goals(self):
         # as the default just give some hardcoded goals that are useful for testing
         # perhaps allow for a flag/string param to allow for different goal sets
-        pass
-
+        # TODO: see if the second dimension is correct
+        goals = Variable(torch.randn(self.N, self.GOAL_DIM).type(dtype), requires_grad=False)
+        
+        return goals
+        
+    def train(self, epochs=100):
+        self.agent.train() # set to training mode
+        
+        optimizer = optim.SGD(self.agent.parameters(), lr=0.01)
+        for _ in range(epochs): 
+            # have some sort of training point (data, target)
+            data, target = Variable(data), Variable(target)
+            
+            optimizer.zero_grad()   # zero the gradient buffers
+            output = self.agent(input_data)
+            loss = self.compute_loss()
+            loss.backward()
+            optimizer.step()    # Does the update
 
 def main():
     controller = Controller()
+    
+    # train it and feed in data?
     
 if __name__ == '__main__':
     main()

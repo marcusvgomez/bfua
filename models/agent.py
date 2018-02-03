@@ -18,10 +18,10 @@ from torch.nn.parameter import Parameter
 
 
 
-class agent:
+class agent(nn.Module):
 	def __init__(self, num_agents, vocab_size,
 				 input_space, hidden_comm_size, comm_output_size,
-				 hidden_input_size, input_output_size,
+				 input_size, hidden_input_size, input_output_size,
 				 hidden_output_size,
 				 memory_size = 32, goal_size = 3, is_cuda = False, dropout_prob = 0.1):
 		super(agent, self).__init__()
