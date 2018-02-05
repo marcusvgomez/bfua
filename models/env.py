@@ -35,6 +35,9 @@ class env:
     def modify_world_state(self, agents, landmarks):
         pass
 
+    ##this is literally horrible design
+    def expose_world_state(self): return self.world_state_agents, self.world_state_landmarks
+
     ##actions should be a 6 X N tensor
     ##returns a 12(N+M) x N tensor
     def forward(self, actions):
@@ -72,9 +75,4 @@ class env:
             """
             result[:,i] = row
         return result
-
-    ##goals is 6 x N
-    def compute_physical_loss(self, goals):
-        pass
-
         

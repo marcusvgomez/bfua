@@ -75,7 +75,7 @@ class Controller():
     
     def compute_loss(self):
         # TODO: fill in these rewards. Physical will come from env.
-        physical_loss = self.env.compute_physical_loss(self.G)
+        physical_loss = self.compute_physical_loss(self.G)
         prediction_loss = self.compute_prediction_loss()
         comm_loss = self.compute_comm_loss()
         self.loss = -(physical_loss + prediction_loss + comm_loss)
