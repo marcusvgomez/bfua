@@ -22,12 +22,11 @@ def main():
     optimizer = RMSprop(controller.agent.parameters(), lr=0.01)
     for epoch in range(runtime_config.n_epochs):
         controller.reset()
-        for t in range():
-            controller.step()
-            optimizer.zero_grad()
-            total_loss = controller.compute_loss()
-            total_loss.backward()
-            optimizer.step()
+        controller.run(runtime_config.horizon)
+        optimizer.zero_grad()
+        total_loss = controller.compute_loss()
+        total_loss.backward()
+        optimizer.step()
 
 
 if __name__ == "__main__":

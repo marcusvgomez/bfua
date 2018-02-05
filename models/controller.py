@@ -72,9 +72,12 @@ class Controller():
         r_c = torch.sum(torch.cmul(self.comm_counts, torch.log(probs)))
         return -r_c
     
+    def compute_physical_loss(self):
+        pass 
+        
     def compute_loss(self):
         # TODO: fill in these rewards. Physical will come from env.
-        physical_loss = self.compute_physical_loss(self.G)
+        physical_loss = self.compute_physical_loss()
         prediction_loss = self.compute_prediction_loss()
         comm_loss = self.compute_comm_loss()
         self.loss = -(physical_loss + prediction_loss + comm_loss)
@@ -99,6 +102,10 @@ class Controller():
         self.X = self.env.forward(actions)
         
         self.update_comm_counts()
+    
+    def run(self, t):
+        for iter_ in len(t):
+            self.step()
         
 
 def main():
