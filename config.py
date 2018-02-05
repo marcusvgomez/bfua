@@ -18,6 +18,10 @@ class RuntimeConfig:
         self.vocab_size = 20 if 'vocab-size' not in args else args['vocab-size']
         self.num_agents = 12 if 'num-agents' not in args else args['num-agents']
         self.num_landmarks = 3 if 'num-landmarks' not in args else args['num-landmarks']
+        # input size is just num_agents + num_landmarks
+        self.hidden_comm_size = 10 if 'hidden-comm-size' not in args else args['hidden-input-size']
+        self.hidden_input_size = 15 if 'hidden-input-size' not in args else args['hidden-input-size']
+        self.hidden_output_size = 20 if 'hidden-output-size' not in args else args['hidden-output-size']
         self.learning_rate = 0.005 if 'learning-rate' not in args else args['learning-rate']
         self.optimizer_decay = float("-inf") if 'optimizer-decay-epoch' not in args else args['optimizer-decay']
         self.optimizer_decay_rate = 1 if 'optimizer-decay-rate' not in args else args['optimizer-decay-rate']

@@ -58,13 +58,15 @@ def main():
     parser.add_argument('--vocab-size', type=int, help='Optinoal param that specifies maximum vocabulary size')
     parser.add_argument('--num-agents', type=int, help='Optional param that specifies the number of agents')
     parser.add_argument('--num-landmarks', type=int, help='Optional param that specifies the number of landmarks')
+    parser.add_argument('--hidden-comm-size', type=int, help='Optional param that specifies the number of hidden layers in comm')
+    parser.add_argument('--hidden-input-size', type=int, help='Optional param that specifies the number of hidden layers in input')
+    parser.add_argument('--hidden-output-size', type=int, help='Optional param that specifies the number of hidden layers in output')
     parser.add_argument('--learning-rate', type=float, help='Initial learning rate')
     parser.add_argument('--dropout', type=float, help='Dropout probability of neurons')
     parser.add_argument('--optimizer_decay', action='store_true', help='Number of epochs of not improving that we decay the optimizer')
     parser.add_argument('--optimizer-decay-epoch', type=float, help='Number of epochs of not improving that we decay the optimizer')
     parser.add_argument('--optimizer-decay-rate', type=float, help='Rate at which we decay the optimizer')
     parser.add_argument('--dirichlet-alpha', type=float, help='Optional param that specifies the Dirichlet Process hyperparameter used in communication reward')
-
 
     arg_dict = vars(parser.parse_args())
     args = parser.parse_args()
