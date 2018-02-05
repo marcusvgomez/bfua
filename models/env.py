@@ -8,7 +8,7 @@ state of the world.
 '''
 import torch
 
-R_DIM = 3
+R_DIM = 2
 STATE_DIM = 7# 2(for position) + 2(for velocity) + 2(for gaze) + 1(for color)
 ACTION_DIM = 4 # 2 (for velocity) + 2(for gaze)
 
@@ -27,7 +27,7 @@ class env:
         self.transform_L[0:2,0:2] = torch.eye(R_DIM)
         self.transform_L[0:2,2:4] = self.timestep * torch.eye(R_DIM)
         self.transform_L[2:4,2:4] = self.gamma * torch.eye(R_DIM)
-        self.transform_L[6,6] = torch.eye(1)
+        self.transform_L[6,6] = 1.
         self.transform_R = torch.FloatTensor(STATE_DIM, ACTION_DIM)
         self.transform_R[2:4,0:2] = self.timestep * torch.eye(R_DIM)
         self.transform_R[4:6,2:4] = torch.eye(R_DIM)
