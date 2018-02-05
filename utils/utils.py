@@ -32,3 +32,6 @@ class GumbelSoftmax(torch.nn.Module):
         out = x - torch.log(-torch.log(U + 1e-10) + 1e-10)
         ret = self.softmax(out / self.tau)
         return ret 
+
+def make_epsilon_noise():
+    return -torch.log(-torch.log(Variable(torch.Tensor([(1,)]).uniform_(0,1))))

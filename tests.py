@@ -59,7 +59,7 @@ def agentDifferentiable():
 
 	optimizer = optim.Adam(currAgent.parameters(), lr = 0.05)
 
-	embedding = currAgent((X, C, g, M, m, True))
+	_, embedding = currAgent((X, C, g, M, m, True))
 	print (embedding)
 	m = embedding.shape
 	#m, n = embedding.shape
