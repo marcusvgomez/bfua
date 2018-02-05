@@ -59,14 +59,14 @@ def agentDifferentiable():
 
 	optimizer = optim.Adam(currAgent.parameters(), lr = 0.05)
 
-	embedding = currAgent((X, C, g, M, m, False))
+	embedding = currAgent((X, C, g, M, m, True))
 	print (embedding)
 	m = embedding.shape
 	#m, n = embedding.shape
 	#print (m, n)
 
 	# loss = (((embedding.float() - Variable(torch.Tensor(torch.randn(1)))))**2).sum()
-	loss = ((embedding - Variable(torch.Tensor(torch.randn((m)))))**2).sum()
+	loss = ((embedding.float() - Variable(torch.Tensor(torch.randn((m)))))**2).sum()
 	#print (loss)
 
 	# assert(False)
