@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--vocab-size', type=int, help='Optinoal param that specifies maximum vocabulary size')
     parser.add_argument('--num-agents', type=int, help='Optional param that specifies the number of agents')
     parser.add_argument('--num-landmarks', type=int, help='Optional param that specifies the number of landmarks')
+    parser.add_argument('--dirichlet-alpha', type=float, help='Optional param that specifies the Dirichlet Process hyperparameter used in communication reward')
     args = vars(parser.parse_args())
     runtime_config = RuntimeConfig(args)
     controller = Controller()

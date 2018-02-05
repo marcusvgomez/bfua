@@ -17,4 +17,5 @@ class RuntimeConfig:
         self.vocab_size = 20 if 'vocab-size' not in args else args['vocab-size']
         self.num_agents = 12 if 'num-agents' not in args else args['num-agents']
         self.num_landmarks = 3 if 'num-landmarks' not in args else args['num-landmarks']
+        self.dirichlet_alpha = 0.01 if 'dirichlet-alpha' not in args else args['dirichlet-alpha']
 
