@@ -61,7 +61,7 @@ class Controller():
         self.loss = self.compute_loss()
         
         # keeps track of the utterances 
-        self.comm_counts = [0] * self.K
+        self.comm_counts = Variable(torch.Tensor(self.K).type(dtype), requires_grad=True)
     
     def compute_prediction_loss(self):
         # can only be completed once the agent network is also predicting goals
@@ -69,10 +69,9 @@ class Controller():
     
     def compute_comm_loss(self):
         # for penalizing large vocabulary sizes
-        r_c = 0
-        n = sum(self.comm_counts)
-        probs = [self.comm_counts[i] / (self.dirichlet_alpha + n - 1.0) for i in range(self.K)]
-        # TODO: finish this and store the entire record to compute dirichlet process
+        # probs should all be greater than 0
+        probs = self.comm_counts / (self.dirichlet_alpha + torch.sum(self.comm_counts) - 1.)
+        r_c = torch.sum(torch.cmul(self.comm_counts, torch.log(probs)))
         return -r_c
     
     def compute_loss(self):
@@ -91,10 +90,10 @@ class Controller():
         return goals
     
     def update_comm_counts(self):
-        # update counts for each communication utterance. counts are used in comm_reward 
-        comms = np.argmax(self.C.data.numpy(), axis=0).ravel()
-        for c in comms:
-            comm_counts[c] += 1
+        # update counts for each communication utterance.
+        # interpolated as a float for differentiability, used in comm_reward 
+        comms = torch.sum(self.C, axis=1)
+        self.comm_counts += comms
     
     def step(self):
         # get the policy action/comms from passing it through the agent network
