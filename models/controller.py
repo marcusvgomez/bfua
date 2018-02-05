@@ -17,6 +17,8 @@ from env import env, STATE_DIM
 
 dtype = torch.FloatTensor
 
+GOAL_DIM = 3 + 2 + 1
+
 class Controller():
     def __init__(self, runtime_config):
         # params. Could probably make this a global constant instead of instance variable
@@ -24,10 +26,10 @@ class Controller():
         self.N = runtime_config.num_agents
         self.M = runtime_config.num_landmarks
         self.K = runtime_config.vocab_size # vocabulary size
+        self.dirichlet_alpha = runtime_config.dirichlet_alpha
         
         # the first 3 are one-hot for which action to perform go/look/nothing
         # Appendix 8.2: "Goal for agent i consists of an action to perform, a location to perform it on  r_bar, and an agent r that should perform that action"
-        self.GOAL_DIM = 3 + 2 + 1
         
         self.env = env(num_agents=self.N, num_landmarks=self.M)
         
@@ -56,44 +58,52 @@ class Controller():
         
         self.loss = self.compute_loss()
         
+        # keeps track of the utterances 
+        self.comm_counts = [0] * self.K
+    
+    def compute_prediction_loss(self):
+        # can only be completed once the agent network is also predicting goals
+        return 0
+    
+    def compute_comm_loss(self):
+        # for penalizing large vocabulary sizes
+        r_c = 0
+        n = sum(self.comm_counts)
+        probs = [self.comm_counts[i] / (self.dirichlet_alpha + n - 1.0) for i in range(self.K)]
+        # TODO: finish this and store the entire record to compute dirichlet process
+        return -r_c
+    
     def compute_loss(self):
-        pass
+        # TODO: fill in these rewards. Physical will come from env.
+        physical_loss = self.env.compute_physical_loss(self.G)
+        prediction_loss = self.compute_prediction_loss()
+        comm_loss = self.compute_comm_loss()
+        self.loss = -(physical_loss + prediction_loss + comm_loss)
+        return self.loss
 
     def specify_goals(self):
         # as the default just give some hardcoded goals that are useful for testing
         # perhaps allow for a flag/string param to allow for different goal sets
-        # TODO: see if the second dimension is correct
-        goals = Variable(torch.randn(self.N, self.GOAL_DIM).type(dtype), requires_grad=False)
+        goals = Variable(torch.randn(GOAL_DIM, self.N).type(dtype), requires_grad=False)
         
         return goals
     
+    def update_comm_counts(self):
+        # update counts for each communication utterance. counts are used in comm_reward 
+        comms = np.argmax(self.C.data.numpy(), axis=0).ravel()
+        for c in comms:
+            comm_counts[c] += 1
+    
     def step(self):
         # get the policy action/comms from passing it through the agent network
-        actions = self.agent.forward((self.X, self.C, self.g, self.M, self.m))
-        next_state = self.env.forward(actions)
-        self.X = next_state
+        actions, self.C = self.agent.forward((self.X, self.C, self.g, self.M, self.m))
+        self.X = self.env.forward(actions)
         
-    
-    # # this is probably useless, ignore
-    # def train(self, epochs=100):
-    #     self.agent.train() # set to training mode
+        self.update_comm_counts()
         
-    #     optimizer = optim.SGD(self.agent.parameters(), lr=0.01)
-    #     for _ in range(epochs): 
-    #         # have some sort of training point (data, target)
-    #         # get the next data point by passing to the environment
-    #         data, target = Variable(data), Variable(target)
-            
-    #         optimizer.zero_grad()   # zero the gradient buffers
-    #         output = self.agent(input_data)
-    #         loss = self.compute_loss()
-    #         loss.backward()
-    #         optimizer.step()    # Does the update
 
 def main():
     controller = Controller()
-    
-    # train it and feed in data?
     
 if __name__ == '__main__':
     main()
