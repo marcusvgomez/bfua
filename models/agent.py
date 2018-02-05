@@ -51,7 +51,8 @@ class agent(nn.Module):
 		self.dropout = nn.Dropout(dropout_prob)
 		self.softmax = nn.Softmax()
 
-		self.gumbel_softmax = gumbel_softmax
+		#self.gumbel_softmax = gumbel_softmax
+                self.gumbel_softmax = GumbelSoftmax(tau=1.0,use_cuda = is_cuda)
 
 
 		self.embeddings = nn.Embedding(vocab_size, vocab_size)
@@ -69,7 +70,7 @@ class agent(nn.Module):
 	Runs a forward pass of the neural network spitting out the 
 	'''
 	def forward(self, inputs):
-		X, C, g, M, m = inputs
+		X, C, g, M, m, is_training = inputs
 
 		# nm, _ = X.shape
 
@@ -92,19 +93,15 @@ class agent(nn.Module):
 
 
 		psi_u, psi_c = output[:self.input_size], output[self.input_size:]
-		print (psi_u, psi_c)
-		psi_c_log = self.softmax(psi_c)
-		# psi_c_gumbel = self.gumbel_softmax(psi_c)
+               
+                if is_training:
+                  communication_output = self.gumbel_softmax(psi_c)
+                else:
+                  cat = Categorical(probs=psi_c)
+                  communication_output = cat.sample()
 
-
-		m = Categorical(psi_c_log)
-		c_action = m.sample()
-
-		# return c_action
-
-		communication_output = self.embeddings(c_action)
-
-		return communication_output
+               
+                return communication_output
 
 	'''
 	Runs a softmax pool which is taking the softmax for all entries
