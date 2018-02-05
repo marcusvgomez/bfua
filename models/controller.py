@@ -12,8 +12,10 @@ import torch
 from torch.autograd import Variable
 import torch.optim as optim
 
-from agent import agent
-from env import env, STATE_DIM
+from models.agent import agent
+from models.env import env, STATE_DIM
+# from env import env, STATE_DIM
+
 
 dtype = torch.FloatTensor
 
