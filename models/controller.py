@@ -13,7 +13,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 
 from models.agent import agent
-from models.env import env, STATE_DIM
+from models.env import env, STATE_DIM, ACTION_DIM
 # from env import env, STATE_DIM
 
 
@@ -28,6 +28,9 @@ class Controller():
         self.N = runtime_config.num_agents
         self.M = runtime_config.num_landmarks
         self.K = runtime_config.vocab_size # vocabulary size
+        self.hidden_comm_size = runtime_config.hidden_comm_size
+        self.hidden_input_size = runtime_config.hidden_input_size
+        self.hidden_output_size = runtime_config.hidden_output_size
         self.dirichlet_alpha = runtime_config.dirichlet_alpha
         
         # the first 3 are one-hot for which action to perform go/look/nothing
@@ -39,10 +42,11 @@ class Controller():
         # OR it looks like create multiple since each network represents one agent?
         # or the agent network should just include all of possible numbers.
         # self.agents = [agent(...) for _ in range(N)]
-        # self.agent = agent(num_agents=self.N, vocab_size=20, input_space=None, 
-        #               hidden_comm_size=10, comm_output_size=50,
-        #               input_size=100, hidden_input_size=20, 
-        #               input_output_size=30, hidden_output_size=30)
+        self.agent = agent(num_agents=self.N, vocab_size=self.K, num_landmarks=self.M,
+                 input_size=self.N+self.M, hidden_comm_size=self.hidden_comm_size, comm_output_size,
+                 hidden_input_size=self.hidden_input_size, input_output_size=self.input_output_size,
+                 hidden_output_size=self.hidden_output_size,
+                 memory_size = 32, goal_size = GOAL_DIM, is_cuda = False, dropout_prob = 0.1):
         
         # each agent's observations of other agent/landmark locations from its 
         # own reference frame. TODO: probably not N+M for observations of all other objects
