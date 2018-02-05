@@ -51,6 +51,9 @@ class agent(nn.Module):
 		self.dropout = nn.Dropout(dropout_prob)
 		self.softmax = nn.Softmax()
 
+		self.gumbel_softmax = gumbel_softmax
+
+
 		self.embeddings = nn.Embedding(vocab_size, vocab_size)
 
 		if is_cuda:
@@ -87,15 +90,17 @@ class agent(nn.Module):
 		output_hidden = self.forwardFC(output_input, self.elu, self.outputFC_1, self.dropout)
 		output = self.forwardFC(output_hidden, self.elu, self.outputFC_2, self.dropout)
 
-		print (output)
 
 		psi_u, psi_c = output[:self.input_size], output[self.input_size:]
 		print (psi_u, psi_c)
 		psi_c_log = self.softmax(psi_c)
+		# psi_c_gumbel = self.gumbel_softmax(psi_c)
 
 
 		m = Categorical(psi_c_log)
 		c_action = m.sample()
+
+		# return c_action
 
 		communication_output = self.embeddings(c_action)
 
