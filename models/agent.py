@@ -22,34 +22,36 @@ from torch.distributions import Categorical
 
 
 class agent(nn.Module):
-    def __init__(self, num_agents, vocab_size,
+    def __init__(self, num_agents, vocab_size, num_landmarks,
                  input_size, hidden_comm_size, comm_output_size,
                  hidden_input_size, input_output_size,
                  hidden_output_size,
                  memory_size = 32, goal_size = 3, is_cuda = False, dropout_prob = 0.1):
         super(agent, self).__init__()
         self.num_agents = num_agents
+        self.num_landmarks = num_landmarks
         self.vocab_size = vocab_size
         self.memory_size = memory_size
         self.input_size = input_size
         self.dropout_prob = dropout_prob
 
-        print ("vocab size is: ", self.vocab_size + input_size)
+        # print ("vocab size is: ", self.vocab_size + input_size)
 
         self.com_FC1 = nn.Linear(vocab_size + memory_size, hidden_comm_size)
         self.com_FC2 = nn.Linear(hidden_comm_size, comm_output_size)
 
-        self.input_FC1 = nn.Linear(input_size, hidden_input_size)
+        self.input_FC1 = nn.Linear(self.input_size, hidden_input_size)
         self.input_FC2 = nn.Linear(hidden_input_size, input_output_size)
 
         print ("size is: ", input_output_size + comm_output_size + goal_size + memory_size)
         self.outputFC_1 = nn.Linear(input_output_size + comm_output_size + goal_size + memory_size, hidden_output_size)
-        self.outputFC_2 = nn.Linear(hidden_output_size, input_size + vocab_size)
+        self.outputFC_2 = nn.Linear(hidden_output_size, self.input_size + vocab_size)
 
         #activation functions and dropout
         self.elu = nn.ELU()
         self.dropout = nn.Dropout(dropout_prob)
         self.softmax = nn.Softmax()
+        self.log_softmax = nn.LogSoftmax()
 
         #self.gumbel_softmax = gumbel_softmax
         self.gumbel_softmax = GumbelSoftmax(tau=1.0,use_cuda = is_cuda)
@@ -72,8 +74,6 @@ class agent(nn.Module):
     def forward(self, inputs):
         X, C, g, M, m, is_training = inputs
 
-        # nm, _ = X.shape
-
         communication_input = torch.cat([C, M], 1) #concatenate along the first direction
 
         hidden_comm = self.forwardFC(communication_input, self.elu, self.com_FC1, self.dropout)
@@ -83,8 +83,7 @@ class agent(nn.Module):
 
         loc_hidden = self.forwardFC(X, self.elu, self.input_FC1, self.dropout)
         loc_output = self.forwardFC(loc_hidden, self.elu, self.input_FC2, self.dropout)
-        loc_pool = self.softmaxPool(loc_output)
-
+        loc_pool = self.softmaxPool(loc_output, dim = 1).squeeze() #this is bad for now need to fix later
 
         #concatenation of pooled communication, location, goal, and memory
         output_input = torch.cat([comm_pool, g, loc_pool, m], 0)
@@ -97,7 +96,8 @@ class agent(nn.Module):
         if is_training:
             communication_output = self.gumbel_softmax(psi_c)
         else:
-            cat = Categorical(probs=psi_c)
+            psi_c_log = self.softmax(psi_c)
+            cat = Categorical(probs=psi_c_log)
             communication_output = cat.sample()
        
         return communication_output
@@ -106,9 +106,9 @@ class agent(nn.Module):
     Runs a softmax pool which is taking the softmax for all entries
     then returning the mean probabilities 
     '''
-    def softmaxPool(self, inputs):
+    def softmaxPool(self, inputs, dim = 0):
         input_prob = self.softmax(inputs)
-        return torch.mean(input_prob, 0)
+        return torch.mean(input_prob, dim = dim)
 
 
     def forwardFC(self, currInput, activation, layer, dropout = None):

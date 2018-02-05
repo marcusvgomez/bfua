@@ -20,8 +20,9 @@ import torch.nn.init as init
 from torch.nn.parameter import Parameter
 
 num_agents = 1
+num_landmarks = 3
 vocab_size = 20
-input_size = 3
+input_size = 57
 hidden_comm_size = 17
 comm_output_size = 32
 hidden_input_size = 45
@@ -41,7 +42,7 @@ def initializeWeights(model):
 
 def agentDifferentiable():
 	# X = Variable(torch.Tensor(torch.randn((num_agents, input_size, hidden_input_size))))
-	X = Variable(torch.Tensor(torch.randn((num_agents, input_size))))
+	X = Variable(torch.Tensor(torch.randn((1, num_agents + num_landmarks, input_size))))
 	C = Variable(torch.Tensor(torch.randn(num_agents, vocab_size)))
 	g = Variable(torch.Tensor(torch.randn(3)))
 	M = Variable(torch.Tensor(torch.randn(num_agents, 32)))
@@ -49,7 +50,7 @@ def agentDifferentiable():
 
 
 	currAgent = agent(num_agents, vocab_size,
-				input_size, hidden_comm_size, comm_output_size,
+				num_landmarks, input_size, hidden_comm_size, comm_output_size,
 				hidden_input_size, input_output_size,
 				hidden_output_size,
 				memory_size = 32, goal_size = 3, is_cuda = False, dropout_prob = 0.1)
@@ -58,7 +59,7 @@ def agentDifferentiable():
 
 	optimizer = optim.Adam(currAgent.parameters(), lr = 0.05)
 
-	embedding = currAgent((X, C, g, M, m, True))
+	embedding = currAgent((X, C, g, M, m, False))
 	print (embedding)
 	m = embedding.shape
 	#m, n = embedding.shape
