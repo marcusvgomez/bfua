@@ -1,9 +1,14 @@
 #our own modules
+from utils.utils import *
 from models.agent import * 
 from models.controller import *
 from models.env import *
-import argparse
 from config import *
+
+
+import sys
+# sys.path.append("../utils/")
+
 
 #torch imports
 import torch
@@ -19,6 +24,7 @@ from torch.nn.parameter import Parameter
 #other imports
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 #model saving code
 def save_model(model, optimizer, epoch_num, best_dev_acc, modelName, bestModelName, is_best = False):
