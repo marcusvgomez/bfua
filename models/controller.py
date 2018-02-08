@@ -78,11 +78,18 @@ class Controller():
         self.physical_losses = []
         
         # keeps track of the utterances 
-        self.comm_counts = Variable(torch.Tensor(self.K).type(dtype), requires_grad=True)
 
         #TODO: Need to properly implement memory
         self.mem = None
+        self.comm_counts = torch.Tensor(self.K).type(dtype)
     
+    def reset(self):
+        self.env = env(num_agents=self.N, num_landmarks=self.M)
+        self.G = self.specify_goals()
+        self.physical_losses = []
+        self.comm_counts = torch.Tensor(self.K).type(dtype)
+
+   
     def compute_prediction_loss(self):
         # can only be completed once the agent network is also predicting goals
         return 0
@@ -173,6 +180,7 @@ class Controller():
     def run(self, t):
         for iter_ in range(t):
             self.step()
+
         
 
 def main():
