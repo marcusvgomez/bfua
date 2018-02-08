@@ -132,6 +132,7 @@ class Controller():
             c_i_t = self.C[:,i]
             loss_t += u_i_t.norm(2)
             loss_t += c_i_t.norm(2)
+        loss_t *= -1.0
         self.physical_losses.append(loss_t)
 
     def step(self):
