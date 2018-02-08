@@ -42,6 +42,7 @@ class Controller():
         self.input_output_size = runtime_config.input_output_size
 
         self.dirichlet_alpha = runtime_config.dirichlet_alpha
+        self.deterministic_goals = runtime_config.deterministic_goals
         
         # the first 3 are one-hot for which action to perform go/look/nothing
         # Appendix 8.2: "Goal for agent i consists of an action to perform, a location to perform it on  r_bar, and an agent r that should perform that action"
@@ -109,10 +110,33 @@ class Controller():
         return self.loss
 
     def specify_goals(self):
-        # as the default just give some hardcoded goals that are useful for testing
-        # perhaps allow for a flag/string param to allow for different goal sets
-        goals = Variable(torch.randn(GOAL_DIM, self.N).type(dtype), requires_grad=False)
+        # if runtime param wants deterministic goals, then we manually specify a set of simple
+        # goals to train on
+        # Goals are formatted as 6-dim vectors: [one hot action selection, location coords, agent] (3 + 2 + 1)
+        # Otherwise, randomly generate one
         
+        goals = torch.FloatTensor(GOAL_DIM, self.N).zero_()
+        if self.deterministic_goals:
+            # agent 0's goal is to get agent 1 to go to (5, 5)
+            goals[:, 0] = torch.FloatTensor([1, 0, 0, 5, 5, 1])
+            # agent 1's goal is to get agent 0 to look UP at (0, 1)
+            goals[:, 1] = torch.FloatTensor([0, 1, 0, 0, 1, 0])
+            # agent 2's goal is to send itself to (-5, -5)
+            goals[:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
+            # the rest just do nothing
+            for i in range(2, N):
+                goals[2, i] = 1
+        else:
+            for i in range(N):
+                action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
+                x, y = np.random.uniform(-20.0, 20.0, size=(2,)) # TODO: have clearer bounds in env so these coordinates mean something
+                target_agent = np.random.randint(0, N)
+                
+                goals[i, action_type] = 1
+                goals[i, 3] = x
+                goals[i, 4] = y
+                goals[i, 5] = target_agent
+
         return goals
     
     def update_comm_counts(self):
