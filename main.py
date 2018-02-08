@@ -73,6 +73,7 @@ def main():
     parser.add_argument('--optimizer-decay-epoch', type=float, help='Number of epochs of not improving that we decay the optimizer')
     parser.add_argument('--optimizer-decay-rate', type=float, help='Rate at which we decay the optimizer')
     parser.add_argument('--dirichlet-alpha', type=float, help='Optional param that specifies the Dirichlet Process hyperparameter used in communication reward')
+    parser.add_argument('--deterministic-goals', type=bool, help='Optional param that specifies whether to generate a pre-specified dummy set of deterministic goals')
 
     arg_dict = vars(parser.parse_args())
     args = parser.parse_args()
