@@ -62,7 +62,8 @@ class Controller():
         # create goals
         self.G = self.specify_goals()
         
-        self.loss = self.compute_loss()
+        #self.loss = self.compute_loss()
+        self.physical_losses = []
         
         # keeps track of the utterances 
         self.comm_counts = Variable(torch.Tensor(self.K).type(dtype), requires_grad=True)
@@ -79,7 +80,7 @@ class Controller():
         return -r_c
     
     def compute_physical_loss(self):
-        pass 
+        return sum(self.physical_losses)
         
     def compute_loss(self):
         # TODO: fill in these rewards. Physical will come from env.
@@ -102,12 +103,33 @@ class Controller():
         comms = torch.sum(self.C, axis=1)
         self.comm_counts += comms
     
+    def update_phys_loss(self, actions):
+        world_state_agents, world_state_landmarks = self.env.expose_world_state()
+        goals = self.G ## GOAL_DIM x N
+        loss_t = 0.0
+        for i in range(self.N):
+            g_a_i = goals[:,i]
+            g_a_r = g_a_i[GOAL_DIM - 1]
+            r_bar = g_a_i[3:5]
+            if g_a_i[0] == 1:
+                p_t_r = world_state_agents[:,g_a_r][0:2]
+                loss_t += (p_t_r - r_bar).norm(2)
+            else if g_a_i[1] == 1: 
+                v_t_r = world_state_agents[:,g_a_r][4:6]
+                loss_t += (v_t_r - r_bar).norm(2)
+            u_i_t = actions[:,i]
+            c_i_t = self.C[:,i]
+            loss_t += u_i_t.norm(2)
+            loss_t += c_i_t.norm(2)
+        self.physical_losses.append(loss_t)
+
     def step(self):
         # get the policy action/comms from passing it through the agent network
         actions, self.C = self.agent.forward((self.X, self.C, self.g, self.M, self.m))
         self.X = self.env.forward(actions)
         
         self.update_comm_counts()
+        self.update_phys_loss(actions)
     
     def run(self, t):
         for iter_ in len(t):
