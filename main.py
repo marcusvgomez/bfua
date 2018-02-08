@@ -80,21 +80,23 @@ def main():
 
     arg_dict['use_cuda'] = args.use_cuda
 
-
+    # print (arg_dict['runtime-horizon'])
     runtime_config = RuntimeConfig(arg_dict)
+    print (runtime_config.time_horizon)
     controller = Controller(runtime_config)
 
     #this needs to be fixed
     optimizer = optim.Adam(controller.agent.parameters(), lr = 0.01)
-    assert(False) #this is here so stuff doesn't break
+    # assert(False) #this is here so stuff doesn't break
 
     loss = []
     not_improved = 0
     max_loss = float("-inf")
     for epoch in range(runtime_config.n_epochs):
-        controller.reset()
+        # controller.reset()
         epoch_loss = []
-        controller.run(runtime_confg.horizon)
+        # controller.run(runtime_config.time_horizon)
+        controller.run(5)
         optimizer.zero_grad()
         total_loss = controller.compute_loss()
         total_loss.backward()

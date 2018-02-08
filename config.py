@@ -7,6 +7,7 @@ Contains runtime config params
 class RuntimeConfig:
 
     def __init__(self, args):
+        print (args)
         self.using_cuda = args['use_cuda']
         self.n_epochs = 10000 if 'n-epochs' not in args else args['n-epochs']
         self.time_horizon = 1000 if 'horizon' not in args else args['horizon']

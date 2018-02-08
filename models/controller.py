@@ -69,7 +69,7 @@ class Controller():
         self.C = Variable(torch.randn(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         
         # create memory bank Tensors??
-        self.M = None
+        self.Mem = None
         
         # create goals
         self.G = self.specify_goals()
@@ -79,6 +79,9 @@ class Controller():
         
         # keeps track of the utterances 
         self.comm_counts = Variable(torch.Tensor(self.K).type(dtype), requires_grad=True)
+
+        #TODO: Need to properly implement memory
+        self.mem = None
     
     def compute_prediction_loss(self):
         # can only be completed once the agent network is also predicting goals
@@ -117,10 +120,10 @@ class Controller():
             # agent 2's goal is to send itself to (-5, -5)
             goals[:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
             # the rest just do nothing
-            for i in range(2, N):
+            for i in range(2, self.N):
                 goals[2, i] = 1
         else:
-            for i in range(N):
+            for i in range(self.N):
                 action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
                 x, y = np.random.uniform(-20.0, 20.0, size=(2,)) # TODO: have clearer bounds in env so these coordinates mean something
                 target_agent = np.random.randint(0, N)
@@ -149,7 +152,7 @@ class Controller():
             if g_a_i[0] == 1:
                 p_t_r = world_state_agents[:,g_a_r][0:2]
                 loss_t += (p_t_r - r_bar).norm(2)
-            else if g_a_i[1] == 1: 
+            elif g_a_i[1] == 1: 
                 v_t_r = world_state_agents[:,g_a_r][4:6]
                 loss_t += (v_t_r - r_bar).norm(2)
             u_i_t = actions[:,i]
@@ -159,16 +162,16 @@ class Controller():
         loss_t *= -1.0
         self.physical_losses.append(loss_t)
 
-    def step(self):
+    def step(self, is_training = True):
         # get the policy action/comms from passing it through the agent network
-        actions, self.C = self.agent.forward((self.X, self.C, self.g, self.M, self.m))
+        actions, self.C = self.agent.forward((self.X, self.C, self.G, self.Mem, self.mem, is_training))
         self.X = self.env.forward(actions)
         
         self.update_comm_counts()
         self.update_phys_loss(actions)
     
     def run(self, t):
-        for iter_ in len(t):
+        for iter_ in range(t):
             self.step()
         
 
