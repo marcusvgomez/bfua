@@ -79,7 +79,7 @@ class agent(nn.Module):
         self.softmax = nn.Softmax()
         self.log_softmax = nn.LogSoftmax()
 
-        self.gumbel_softmax = GumbelSoftmax(tau=1.0,use_cuda = is_cuda)
+        self.gumbel_softmax = utils.GumbelSoftmax(tau=1.0,use_cuda = is_cuda)
 
         self.embeddings = nn.Embedding(vocab_size, vocab_size)
 

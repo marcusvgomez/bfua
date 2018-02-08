@@ -1,9 +1,14 @@
 #our own modules
+from utils.utils import *
 from models.agent import * 
 from models.controller import *
 from models.env import *
-import argparse
 from config import *
+
+
+import sys
+# sys.path.append("../utils/")
+
 
 #torch imports
 import torch
@@ -19,6 +24,7 @@ from torch.nn.parameter import Parameter
 #other imports
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 #model saving code
 def save_model(model, optimizer, epoch_num, best_dev_acc, modelName, bestModelName, is_best = False):
@@ -67,6 +73,7 @@ def main():
     parser.add_argument('--optimizer-decay-epoch', type=float, help='Number of epochs of not improving that we decay the optimizer')
     parser.add_argument('--optimizer-decay-rate', type=float, help='Rate at which we decay the optimizer')
     parser.add_argument('--dirichlet-alpha', type=float, help='Optional param that specifies the Dirichlet Process hyperparameter used in communication reward')
+    parser.add_argument('--deterministic-goals', type=bool, help='Optional param that specifies whether to generate a pre-specified dummy set of deterministic goals')
 
     arg_dict = vars(parser.parse_args())
     args = parser.parse_args()
