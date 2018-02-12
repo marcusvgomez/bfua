@@ -22,11 +22,15 @@ class RuntimeConfig:
         self.num_agents = 12 if 'num-agents' not in args else args['num-agents']
         self.num_landmarks = 3 if 'num-landmarks' not in args else args['num-landmarks']
         # input size is just num_agents + num_landmarks
+        self.input_size = 3 if 'input-size' not in args else args['input-size']
         self.hidden_comm_size = 10 if 'hidden-comm-size' not in args else args['hidden-input-size']
         self.hidden_input_size = 15 if 'hidden-input-size' not in args else args['hidden-input-size']
         self.hidden_output_size = 20 if 'hidden-output-size' not in args else args['hidden-output-size']
         self.comm_output_size = 25 if 'comm_output_size' not in args else args['comm_output_size']
         self.input_output_size = 30 if 'input_output_size' not in args else args['input_output_size']
+
+        #preset network parameters these are somewhat hard coded into agent
+        self.memory_size = 32 if 'memory_size' not in args else args['memory_size'] #this is used for both memory tensors
 
 
         #hyperparameters
