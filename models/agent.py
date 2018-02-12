@@ -18,6 +18,7 @@ from torch.nn.parameter import Parameter
 
 from torch.distributions import Categorical
 
+from env import STATE_DIM, ACTION_DIM
 '''
 Agent operating in the environment 
 
@@ -39,7 +40,7 @@ class agent(nn.Module):
     def __init__(self, num_agents, vocab_size, num_landmarks,
                  input_size, hidden_comm_size, comm_output_size,
                  hidden_input_size, input_output_size,
-                 hidden_output_size,
+                 hidden_output_size, action_dim = ACTION_DIM,
                  memory_size = 32, goal_size = 6, is_cuda = False, dropout_prob = 0.0):
         super(agent, self).__init__()
         self.num_agents = num_agents
@@ -48,8 +49,11 @@ class agent(nn.Module):
         self.memory_size = memory_size
         self.input_size = input_size
         self.dropout_prob = dropout_prob
+        self.action_dim = action_dim
 
         # print ("vocab size is: ", self.vocab_size + input_size)
+
+        print "num agents and landmarks is: ", self.num_landmarks, self.num_agents
 
         self.communication_FC = nn.Sequential(
                 nn.Linear(vocab_size + memory_size, hidden_comm_size),
@@ -59,7 +63,7 @@ class agent(nn.Module):
             )
 
         self.input_FC = nn.Sequential(
-                nn.Linear(self.input_size, hidden_input_size),
+                nn.Linear(self.input_size * STATE_DIM, hidden_input_size),
                 nn.ELU(),
                 nn.Dropout(dropout_prob),
                 nn.Linear(hidden_input_size, input_output_size)
@@ -69,7 +73,7 @@ class agent(nn.Module):
                 nn.Linear(input_output_size + comm_output_size + goal_size + memory_size, hidden_output_size),
                 nn.ELU(),
                 nn.Dropout(dropout_prob),
-                nn.Linear(hidden_output_size, self.input_size + vocab_size)
+                nn.Linear(hidden_output_size, action_dim + vocab_size)
             )
 
 
@@ -78,7 +82,7 @@ class agent(nn.Module):
         self.softmax = nn.Softmax()
         self.log_softmax = nn.LogSoftmax()
 
-        self.gumbel_softmax = utils.GumbelSoftmax(tau=1.0,use_cuda = is_cuda)
+        self.gumbel_softmax = GumbelSoftmax(tau=1.0,use_cuda = is_cuda)
 
         self.embeddings = nn.Embedding(vocab_size, vocab_size)
 
@@ -97,7 +101,18 @@ class agent(nn.Module):
     def forward(self, inputs):
         X, C, g, M, m, is_training = inputs
 
-        communication_input = torch.cat([C, M], 1) #concatenate along the first direction
+        #reshaping everything for sanity
+        M = M.transpose(1, 2)
+        C = C.transpose(0, 1)
+        X = X.transpose(0, 1)
+        g = g.transpose(0, 1)
+        m = m.transpose(0, 1)
+
+
+        C = C.repeat(self.num_agents, 1, 1)
+        X = X.repeat(self.num_agents, 1, 1)
+
+        communication_input = torch.cat([C, M], 2) #concatenate along the first direction
 
         comm_out = self.communication_FC(communication_input)
         comm_pool = self.softmaxPool(comm_out)
@@ -105,11 +120,13 @@ class agent(nn.Module):
         loc_output = self.input_FC(X)
         loc_pool = self.softmaxPool(loc_output, dim = 1).squeeze() #this is bad for now need to fix later
 
+
         #concatenation of pooled communication, location, goal, and memory
-        output_input = torch.cat([comm_pool, g, loc_pool, m], 0)
+        output_input = torch.cat([comm_pool, m, loc_pool, g], 1)
+
         output = self.output_FC(output_input)
 
-        psi_u, psi_c = output[:self.input_size], output[self.input_size:]
+        psi_u, psi_c = output[:, :self.action_dim], output[:, self.action_dim:]
         
         action_output = psi_u + make_epsilon_noise()
 
@@ -119,6 +136,11 @@ class agent(nn.Module):
             psi_c_log = self.softmax(psi_c)
             cat = Categorical(probs=psi_c_log)
             communication_output = cat.sample()
+
+        #transposing because we have to i think
+        #I really need to check to make sure math stuff works
+        action_output = action_output.transpose(0,1)
+        communication_output = communication_output.transpose(0,1)
        
         return action_output, communication_output
 

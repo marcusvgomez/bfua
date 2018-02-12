@@ -12,8 +12,10 @@ import torch
 from torch.autograd import Variable
 import torch.optim as optim
 
-from models.agent import agent
-from models.env import env, STATE_DIM, ACTION_DIM
+
+
+from agent import agent
+from env import env, STATE_DIM, ACTION_DIM
 # from env import env, STATE_DIM
 
 
@@ -34,12 +36,13 @@ class Controller():
         self.M = runtime_config.num_landmarks
         self.K = runtime_config.vocab_size # vocabulary size
 
-
+        self.memory_size = runtime_config.memory_size
         self.hidden_comm_size = runtime_config.hidden_comm_size
         self.hidden_input_size = runtime_config.hidden_input_size
         self.hidden_output_size = runtime_config.hidden_output_size
         self.comm_output_size = runtime_config.comm_output_size
         self.input_output_size = runtime_config.input_output_size
+
 
         self.dirichlet_alpha = runtime_config.dirichlet_alpha
         self.deterministic_goals = runtime_config.deterministic_goals
@@ -53,7 +56,7 @@ class Controller():
         # OR it looks like create multiple since each network represents one agent?
         # or the agent network should just include all of possible numbers.
         # self.agents = [agent(...) for _ in range(N)]
-        self.agent = agent(num_agents=self.N, vocab_size=self.K, num_landmarks=self.M,
+        self.agent_trainable = agent(num_agents=self.N, vocab_size=self.K, num_landmarks=self.M,
                  input_size=self.N+self.M, hidden_comm_size=self.hidden_comm_size, 
                  comm_output_size = self.comm_output_size,
                  hidden_input_size=self.hidden_input_size, input_output_size=self.input_output_size,
@@ -69,18 +72,17 @@ class Controller():
         self.C = Variable(torch.randn(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         
         # create memory bank Tensors??
-        self.Mem = None
+        self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype))
         
         # create goals
         self.G = self.specify_goals()
         
-        #self.loss = self.compute_loss()
         self.physical_losses = []
         
         # keeps track of the utterances 
 
         #TODO: Need to properly implement memory
-        self.mem = None
+        self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype))
         self.comm_counts = torch.Tensor(self.K).type(dtype)
     
     def reset(self):
@@ -98,7 +100,7 @@ class Controller():
         # for penalizing large vocabulary sizes
         # probs should all be greater than 0
         probs = self.comm_counts / (self.dirichlet_alpha + torch.sum(self.comm_counts) - 1.)
-        r_c = torch.sum(torch.cmul(self.comm_counts, torch.log(probs)))
+        r_c = torch.sum(self.comm_counts * torch.log(probs))
         return -r_c
     
     def compute_physical_loss(self):
@@ -140,28 +142,38 @@ class Controller():
                 goals[i, 4] = y
                 goals[i, 5] = target_agent
 
-        return goals
+        return Variable(goals.type(dtype), requires_grad = False)
     
     def update_comm_counts(self):
         # update counts for each communication utterance.
         # interpolated as a float for differentiability, used in comm_reward 
-        comms = torch.sum(self.C, axis=1)
-        self.comm_counts += comms
+        comms = torch.sum(self.C, dim=1)
+        self.comm_counts += comms.data
     
     def update_phys_loss(self, actions):
         world_state_agents, world_state_landmarks = self.env.expose_world_state()
         goals = self.G ## GOAL_DIM x N
         loss_t = 0.0
+        print loss_t
         for i in range(self.N):
             g_a_i = goals[:,i]
-            g_a_r = g_a_i[GOAL_DIM - 1]
+            g_a_r = int(g_a_i[GOAL_DIM - 1].data[0])
             r_bar = g_a_i[3:5]
-            if g_a_i[0] == 1:
+            if g_a_i.data[0] == 1:
                 p_t_r = world_state_agents[:,g_a_r][0:2]
-                loss_t += (p_t_r - r_bar).norm(2)
-            elif g_a_i[1] == 1: 
+                try:
+                    loss_t += (p_t_r - r_bar).norm(2)
+                except RuntimeError as e:
+                    pass
+                    # print "FUCK", p_t_r, r_bar
+
+            elif g_a_i.data[1] == 1: 
                 v_t_r = world_state_agents[:,g_a_r][4:6]
-                loss_t += (v_t_r - r_bar).norm(2)
+                try:
+                    loss_t += (v_t_r - r_bar).norm(2)
+                except RuntimeError as e:
+                    pass
+                    # print "FUCK", v_t_r, 
             u_i_t = actions[:,i]
             c_i_t = self.C[:,i]
             loss_t += u_i_t.norm(2)
@@ -171,7 +183,7 @@ class Controller():
 
     def step(self, is_training = True):
         # get the policy action/comms from passing it through the agent network
-        actions, self.C = self.agent.forward((self.X, self.C, self.G, self.Mem, self.mem, is_training))
+        actions, self.C = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
         self.X = self.env.forward(actions)
         
         self.update_comm_counts()
