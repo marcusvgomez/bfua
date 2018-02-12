@@ -82,9 +82,6 @@ class agent:
 		psi_c_log = psi_c.log()
 
 
-
-
-
 	'''
 	Runs a softmax pool which is taking the softmax for all entries
 	then returning the mean probabilities 
