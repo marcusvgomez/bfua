@@ -73,7 +73,7 @@ class agent(nn.Module):
                 nn.Linear(input_output_size + comm_output_size + goal_size + memory_size, hidden_output_size),
                 nn.ELU(),
                 nn.Dropout(dropout_prob),
-                nn.Linear(hidden_output_size, action_dim + vocab_size)
+                nn.Linear(hidden_output_size, action_dim + vocab_size + memory_size * num_agents + memory_size)
             )
 
 
@@ -126,9 +126,14 @@ class agent(nn.Module):
 
         output = self.output_FC(output_input)
 
-        psi_u, psi_c = output[:, :self.action_dim], output[:, self.action_dim:]
+        psi_u, psi_c, mem_mm_delta, mem_delta = output[:, :self.action_dim], output[:, self.action_dim:self.action_dim + self.vocab_size],
+                                                output[:, self.action_dim + self.vocab_size: self.action_dim + self.vocab_size + self.memory_size * self.num_agents],
+                                                output[:, self.action_dim + self.vocab_size + self.memory_size * self.num_agents: ]
+
         
         action_output = psi_u + make_epsilon_noise()
+
+        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, self.num_agents)
 
         if is_training:
             communication_output = self.gumbel_softmax(psi_c)
@@ -142,7 +147,7 @@ class agent(nn.Module):
         action_output = action_output.transpose(0,1)
         communication_output = communication_output.transpose(0,1)
        
-        return action_output, communication_output
+        return action_output, communication_output, mem_mm_delta, mem_delta
 
     '''
     Runs a softmax pool which is taking the softmax for all entries

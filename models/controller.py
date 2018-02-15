@@ -46,6 +46,8 @@ class Controller():
 
         self.dirichlet_alpha = runtime_config.dirichlet_alpha
         self.deterministic_goals = runtime_config.deterministic_goals
+
+        self.runtime_config = runtime_config
         
         # the first 3 are one-hot for which action to perform go/look/nothing
         # Appendix 8.2: "Goal for agent i consists of an action to perform, a location to perform it on  r_bar, and an agent r that should perform that action"
@@ -62,6 +64,10 @@ class Controller():
                  hidden_input_size=self.hidden_input_size, input_output_size=self.input_output_size,
                  hidden_output_size=self.hidden_output_size,
                  memory_size = 32, goal_size = GOAL_DIM, is_cuda = False, dropout_prob = 0.1)
+
+        if runtime_config.is_cuda:
+            print "running cuda"
+            self.agent_trainable.cuda()
         
         # each agent's observations of other agent/landmark locations from its 
         # own reference frame. TODO: probably not N+M for observations of all other objects
@@ -183,6 +189,14 @@ class Controller():
 
     def step(self, is_training = True):
         # get the policy action/comms from passing it through the agent network
+        if self.runtime_config.is_cuda:
+            self.X = self.X.cuda()
+            self.C = self.C.cuda()
+            self.G = self.G.cuda()
+            self.Mem = self.Mem.cuda()
+            self.mem = self.mem.cuda()
+
+
         actions, self.C = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
         self.X = self.env.forward(actions)
         

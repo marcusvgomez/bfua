@@ -86,8 +86,7 @@ def main():
     controller = Controller(runtime_config)
 
     #this needs to be fixed
-    optimizer = optim.Adam(controller.agent_trainable.parameters(), lr = 0.01)
-    # assert(False) #this is here so stuff doesn't break
+    optimizer = optim.Adam(controller.agent_trainable.parameters(), lr = 0.0001)
 
     loss = []
     not_improved = 0
@@ -97,7 +96,7 @@ def main():
         # controller.reset()
         epoch_loss = []
         # controller.run(runtime_config.time_horizon)
-        controller.run(5)
+        controller.run(1000)
         optimizer.zero_grad()
         total_loss = controller.compute_loss()
         # total_loss.backward(retain_graph = True)
@@ -106,9 +105,9 @@ def main():
         loss.append(total_loss)
         print "EPOCH IS: ", epoch, total_loss.data[0]
         #only runs if we are using optimizer decay
-        if total_loss.data[0] < max_loss and args.optimizer_decay:
-            max_loss = total_loss
-            updateOptimizer(optimizer, runtime_config.optimizer_decay_rate)
+        # if total_loss.data[0] < max_loss and args.optimizer_decay:
+            # max_loss = total_loss
+            # updateOptimizer(optimizer, runtime_config.optimizer_decay_rate)
 
     plot_loss(loss)
 
