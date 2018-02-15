@@ -1,13 +1,13 @@
-#our own modules
-# from utils.utils import *
-from models.agent import * 
-from models.controller import *
-from models.env import *
-from config import *
-
-
 import sys
-# sys.path.append("../utils/")
+sys.path.append("./models")
+sys.path.append("./utils")
+
+#our own modules
+from utils import *
+from agent import * 
+from controller import *
+from env import *
+from config import *
 
 
 #torch imports
