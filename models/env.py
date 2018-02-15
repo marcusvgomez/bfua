@@ -7,13 +7,14 @@ the perspective of each agent. Internally maintains the current
 state of the world.
 '''
 import torch
+from torch.autograd import Function, Variable
 
 R_DIM = 2
 STATE_DIM = 7# 2(for position) + 2(for velocity) + 2(for gaze) + 1(for color)
 ACTION_DIM = 4 # 2 (for velocity) + 2(for gaze)
 
 class env:
-    def __init__(self, num_agents, num_landmarks, timestep=0.1, damping_coef=0.5):
+    def __init__(self, num_agents, num_landmarks, timestep=0.1, damping_coef=0.5, is_cuda = False):
         self.num_agents = num_agents
         self.num_landmarks = num_landmarks
         self.timestep = timestep #delta t
@@ -21,6 +22,7 @@ class env:
         self.gamma = 1 - self.damping_coef
         self.world_state_agents = torch.FloatTensor(STATE_DIM, self.num_agents).zero_()
         self.world_state_landmarks = torch.FloatTensor(STATE_DIM, self.num_landmarks).zero_()
+
         
         ## this probably shouldn't be hardcoded but...whatever
         self.transform_L = torch.FloatTensor(STATE_DIM, STATE_DIM)
@@ -31,6 +33,17 @@ class env:
         self.transform_R = torch.FloatTensor(STATE_DIM, ACTION_DIM)
         self.transform_R[2:4,0:2] = self.timestep * torch.eye(R_DIM)
         self.transform_R[4:6,2:4] = torch.eye(R_DIM)
+
+        self.transform_L = Variable(self.transform_L)
+        self.transform_R = Variable(self.transform_R)
+        self.world_state_agents = Variable(self.world_state_agents)
+        self.world_state_landmarks = Variable(self.world_state_landmarks)
+
+	if is_cuda:
+		self.transform_L = self.transform_L.cuda()
+		self.transform_R = self.transform_R.cuda()
+		self.world_state_agents = self.world_state_agents.cuda()
+		self.world_state_landmarks = self.world_state_landmarks.cuda()
 
     def modify_world_state(self, agents, landmarks):
         pass
@@ -44,14 +57,14 @@ class env:
         L = torch.matmul(self.transform_L, self.world_state_agents)
         R = torch.matmul(self.transform_R, actions)
         self.world_state_agents = L + R
-        result = torch.FloatTensor(STATE_DIM*(self.num_agents + num_landmarks), self.num_agents)
+        result = torch.FloatTensor(STATE_DIM*(self.num_agents + self.num_landmarks), self.num_agents)
         for i in range(self.num_agents):
-            row = torch.FloatTensor(STATE_DIM*(self.num_agents + num_landmarks))
+            row = torch.FloatTensor(STATE_DIM*(self.num_agents + self.num_landmarks))
             for j in range(self.num_agents):
-                row[STATE_DIM*j:STATE_DIM*(j+1)] = self.world_state_agents[:,j] 
+                row[STATE_DIM*j:STATE_DIM*(j+1)] = self.world_state_agents.data[:,j] 
             offset = STATE_DIM*self.num_agents
             for j in range(self.num_landmarks):
-                row[offset + STATE_DIM*j: offset + STATE_DIM*(j+1)] = self.world_state_landmarks[:,j]
+                row[offset + STATE_DIM*j: offset + STATE_DIM*(j+1)] = self.world_state_landmarks.data[:,j]
 
             """
             for j in range(self.num_agents):
@@ -74,5 +87,5 @@ class env:
                 row[offset + STATE_DIM*j + 6] = self.world_state_landmarks[6,j]
             """
             result[:,i] = row
-        return result
+        return Variable(result)
         
