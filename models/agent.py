@@ -81,7 +81,7 @@ class agent(nn.Module):
         self.dropout = nn.Dropout(dropout_prob)
         self.softmax = nn.Softmax()
         self.log_softmax = nn.LogSoftmax()
-
+        self.tanh = nn.Tanh()
         self.gumbel_softmax = GumbelSoftmax(tau=1.0,use_cuda = is_cuda)
 
         self.embeddings = nn.Embedding(vocab_size, vocab_size)
@@ -100,7 +100,6 @@ class agent(nn.Module):
     '''
     def forward(self, inputs):
         X, C, g, M, m, is_training = inputs
-
         #reshaping everything for sanity
         M = M.transpose(1, 2)
         C = C.transpose(0, 1)
@@ -146,12 +145,16 @@ class agent(nn.Module):
             cat = Categorical(probs=psi_c_log)
             communication_output = cat.sample()
 
+        #memory updates
+        M = self.tanh(M.transpose(1,2) + mem_mm_delta + make_epsilon_noise())
+        m = self.tanh(m + mem_delta + make_epsilon_noise()).transpose(0,1)
+
         #transposing because we have to i think
         #I really need to check to make sure math stuff works
         action_output = action_output.transpose(0,1)
         communication_output = communication_output.transpose(0,1)
        
-        return action_output, communication_output, mem_mm_delta, mem_delta
+        return action_output, communication_output, M, m
 
     '''
     Runs a softmax pool which is taking the softmax for all entries

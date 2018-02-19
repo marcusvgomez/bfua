@@ -200,8 +200,8 @@ class Controller():
             self.mem = self.mem.cuda()
 
 
-        actions, self.C, mem_mm_delta, mem_delta = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
-        
+        actions, self.C, self.Mem, self.mem = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
+        # self.updateMemory(mem_mm_delta, mem_delta)
         self.X = self.env.forward(actions)
         
         self.update_comm_counts()
