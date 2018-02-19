@@ -57,7 +57,7 @@ class env:
         L = torch.matmul(self.transform_L, self.world_state_agents)
         R = torch.matmul(self.transform_R, actions)
         self.world_state_agents = L + R
-        self.world_state_agents[0:2,:] = torch.clamp(self.world_state_agents[0:2,:], 0.0, 10.0)
+        #self.world_state_agents[0:2,:] = torch.clamp(self.world_state_agents[0:2,:], -10.0, 10.0)
         result = torch.FloatTensor(STATE_DIM*(self.num_agents + self.num_landmarks), self.num_agents)
         for i in range(self.num_agents):
             row = torch.FloatTensor(STATE_DIM*(self.num_agents + self.num_landmarks))

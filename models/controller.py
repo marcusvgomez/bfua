@@ -52,7 +52,7 @@ class Controller():
         # the first 3 are one-hot for which action to perform go/look/nothing
         # Appendix 8.2: "Goal for agent i consists of an action to perform, a location to perform it on  r_bar, and an agent r that should perform that action"
         
-        self.env = env(num_agents=self.N, num_landmarks=self.M)
+        self.env = env(num_agents=self.N, num_landmarks=self.M, is_cuda=self.runtime_config.use_cuda)
         
         # create agent policy network
         # OR it looks like create multiple since each network represents one agent?
@@ -94,7 +94,7 @@ class Controller():
 		self.comm_counts = self.comm_counts.cuda()
     
     def reset(self):
-        self.env = env(num_agents=self.N, num_landmarks=self.M)
+        self.env = env(num_agents=self.N, num_landmarks=self.M, is_cuda=self.runtime_config.use_cuda)
         self.G = self.specify_goals()
         self.physical_losses = []
         self.comm_counts = torch.Tensor(self.K).type(dtype)
@@ -167,6 +167,7 @@ class Controller():
             g_a_i = goals[:,i]
             g_a_r = int(g_a_i[GOAL_DIM - 1].data[0])
             r_bar = g_a_i[3:5]
+            ## GOTO action
             if g_a_i.data[0] == 1:
                 p_t_r = world_state_agents[:,g_a_r][0:2]
                 try:
@@ -174,7 +175,7 @@ class Controller():
                 except RuntimeError as e:
                     pass
                     # print "FUCK", p_t_r, r_bar
-
+            #GAZE action
             elif g_a_i.data[1] == 1: 
                 v_t_r = world_state_agents[:,g_a_r][4:6]
                 try:
@@ -189,7 +190,7 @@ class Controller():
         loss_t *= -1.0
         self.physical_losses.append(loss_t)
 
-    def step(self, is_training = True):
+    def step(self, is_training = True, debug=False):
         # get the policy action/comms from passing it through the agent network
         if self.runtime_config.use_cuda:
             self.X = self.X.cuda()
@@ -204,11 +205,15 @@ class Controller():
         
         self.update_comm_counts()
         self.update_phys_loss(actions)
+        if debug: print actions
     
     def run(self, t):
         for iter_ in range(t):
-            self.step()
-            if iter_ == t - 1: print self.env.expose_world_state()[0]
+            if iter_ == t - 1: 
+                print self.env.expose_world_state()[0]
+                self.step(debug=True)
+            else:
+                self.step()
 
         
 

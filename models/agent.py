@@ -86,8 +86,8 @@ class agent(nn.Module):
 
         self.embeddings = nn.Embedding(vocab_size, vocab_size)
 
-#        if is_cuda:
-#            self.initializeCuda()
+        #if is_cuda:
+        #    self.initializeCuda()
 
     '''
     Takes in inputs which is a tuple containing
