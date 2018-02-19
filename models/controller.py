@@ -117,8 +117,6 @@ class Controller():
         
     def compute_loss(self):
         # TODO: fill in these rewards. Physical will come from env.
-	print self.physical_losses
-	assert False
         physical_loss = self.compute_physical_loss()
         prediction_loss = self.compute_prediction_loss()
         comm_loss = self.compute_comm_loss()
@@ -132,7 +130,6 @@ class Controller():
         # Otherwise, randomly generate one
         
         goals = torch.FloatTensor(GOAL_DIM, self.N).zero_()
-	print self.X
         if self.deterministic_goals:
             # agent 0's goal is to get agent 1 to go to (5, 5)
             goals[:, 0] = torch.FloatTensor([1, 0, 0, 5, 5, 1])
@@ -170,10 +167,8 @@ class Controller():
             g_a_i = goals[:,i]
             g_a_r = int(g_a_i[GOAL_DIM - 1].data[0])
             r_bar = g_a_i[3:5]
-            print "rbar", r_bar
             if g_a_i.data[0] == 1:
                 p_t_r = world_state_agents[:,g_a_r][0:2]
-                print "ptr", p_t_r
                 try:
                     loss_t += (p_t_r - r_bar).norm(2)
                 except RuntimeError as e:
@@ -182,7 +177,6 @@ class Controller():
 
             elif g_a_i.data[1] == 1: 
                 v_t_r = world_state_agents[:,g_a_r][4:6]
-                print "vtr", "v_t_r"
                 try:
                     loss_t += (v_t_r - r_bar).norm(2)
                 except RuntimeError as e:
@@ -214,6 +208,7 @@ class Controller():
     def run(self, t):
         for iter_ in range(t):
             self.step()
+            if iter_ == t - 1: print self.env.expose_world_state()[0]
 
         
 

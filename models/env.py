@@ -25,12 +25,12 @@ class env:
 
         
         ## this probably shouldn't be hardcoded but...whatever
-        self.transform_L = torch.FloatTensor(STATE_DIM, STATE_DIM)
+        self.transform_L = torch.FloatTensor(STATE_DIM, STATE_DIM).zero_()
         self.transform_L[0:2,0:2] = torch.eye(R_DIM)
         self.transform_L[0:2,2:4] = self.timestep * torch.eye(R_DIM)
         self.transform_L[2:4,2:4] = self.gamma * torch.eye(R_DIM)
         self.transform_L[6,6] = 1.
-        self.transform_R = torch.FloatTensor(STATE_DIM, ACTION_DIM)
+        self.transform_R = torch.FloatTensor(STATE_DIM, ACTION_DIM).zero_()
         self.transform_R[2:4,0:2] = self.timestep * torch.eye(R_DIM)
         self.transform_R[4:6,2:4] = torch.eye(R_DIM)
 
@@ -57,6 +57,7 @@ class env:
         L = torch.matmul(self.transform_L, self.world_state_agents)
         R = torch.matmul(self.transform_R, actions)
         self.world_state_agents = L + R
+        self.world_state_agents[0:2,:] = torch.clamp(self.world_state_agents[0:2,:], 0.0, 10.0)
         result = torch.FloatTensor(STATE_DIM*(self.num_agents + self.num_landmarks), self.num_agents)
         for i in range(self.num_agents):
             row = torch.FloatTensor(STATE_DIM*(self.num_agents + self.num_landmarks))

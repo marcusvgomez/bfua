@@ -19,7 +19,7 @@ class RuntimeConfig:
         
         #input network parameters
         self.vocab_size = 20 if 'vocab-size' not in args else args['vocab-size']
-        self.num_agents = 12 if 'num-agents' not in args else args['num-agents']
+        self.num_agents = 3 if 'num-agents' not in args else args['num-agents']
         self.num_landmarks = 3 if 'num-landmarks' not in args else args['num-landmarks']
         # input size is just num_agents + num_landmarks
         self.input_size = 3 if 'input-size' not in args else args['input-size']

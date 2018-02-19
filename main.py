@@ -98,10 +98,10 @@ def main():
     max_loss = float("-inf")
     for epoch in range(runtime_config.n_epochs):
 
-        # controller.reset()
+        controller.reset()
         epoch_loss = []
         # controller.run(runtime_config.time_horizon)
-        controller.run(10)
+        controller.run(100)
         optimizer.zero_grad()
         total_loss = controller.compute_loss()
         # total_loss.backward(retain_graph = True)
