@@ -146,8 +146,13 @@ class agent(nn.Module):
             communication_output = cat.sample()
 
         #memory updates
-        M = self.tanh(M.transpose(1,2) + mem_mm_delta + make_epsilon_noise())
-        m = self.tanh(m + mem_delta + make_epsilon_noise()).transpose(0,1)
+        M_eps = make_epsilon_noise()
+        m_eps = make_epsilon_noise()
+        if self.use_cuda:
+            M_eps = M_eps.cuda()
+            m_eps = m_eps.cuda()
+        M = self.tanh(M.transpose(1,2) + mem_mm_delta + M_eps)
+        m = self.tanh(m + mem_delta + m_eps).transpose(0,1)
 
         #transposing because we have to i think
         #I really need to check to make sure math stuff works

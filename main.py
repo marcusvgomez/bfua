@@ -91,7 +91,7 @@ def main():
     controller = Controller(runtime_config)
 
     #this needs to be fixed
-    optimizer = optim.Adam(controller.agent_trainable.parameters(), lr = 0.001)
+    optimizer = optim.Adam(controller.agent_trainable.parameters(), lr = 0.0005)
 
     loss = []
     not_improved = 0
@@ -101,7 +101,7 @@ def main():
         controller.reset()
         epoch_loss = []
         # controller.run(runtime_config.time_horizon)
-        controller.run(100)
+        controller.run(10)
         optimizer.zero_grad()
         total_loss = controller.compute_loss()
         # total_loss.backward(retain_graph = True)
