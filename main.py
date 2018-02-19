@@ -91,7 +91,7 @@ def main():
     controller = Controller(runtime_config)
 
     #this needs to be fixed
-    optimizer = optim.Adam(controller.agent_trainable.parameters(), lr = 0.0001)
+    optimizer = optim.Adam(controller.agent_trainable.parameters(), lr = 0.001)
 
     loss = []
     not_improved = 0
