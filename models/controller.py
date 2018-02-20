@@ -12,17 +12,16 @@ import torch
 from torch.autograd import Variable
 import torch.optim as optim
 
-
-
 from agent import agent
 from env import env, STATE_DIM, ACTION_DIM
+from visualize import draw
 # from env import env, STATE_DIM
 
-
+import time
 import sys
+import os
 sys.path.append("./utils/")
 from utils import *
-
 
 dtype = torch.FloatTensor
 
@@ -66,10 +65,7 @@ class Controller():
                  memory_size = 32, goal_size = GOAL_DIM, is_cuda = runtime_config.use_cuda, dropout_prob = 0.1,
                  is_goal_predicting = True)
 
-        if runtime_config.use_cuda:
-            print "running cuda"
-            self.agent_trainable.cuda()
-        
+
         # each agent's observations of other agent/landmark locations from its 
         # own reference frame. TODO: probably not N+M for observations of all other objects
         # maybe X can just be a tensor and not a variable since it's not being trained
@@ -91,8 +87,18 @@ class Controller():
         #TODO: Need to properly implement memory
         self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype), requires_grad = True)
         self.comm_counts = Variable(torch.zeros(self.K).type(dtype), requires_grad = True)
-	if runtime_config.use_cuda:
-		self.comm_counts = self.comm_counts.cuda()
+        
+        if runtime_config.use_cuda:
+            print "running cuda"
+            self.agent_trainable.cuda()
+            self.comm_counts = self.comm_counts.cuda()
+        
+        # make directory for storing visualizations
+        self.img_dir = os.path.dirname(__file__) + '/../imgs/' + time.strftime('%m%d-%I%M') + '/'
+        try:
+            os.mkdir(self.img_dir[:-1])
+        except OSError as err:
+            pass
     
     def reset(self):
         del self.physical_losses[:]
@@ -239,7 +245,6 @@ class Controller():
         self.C = Variable(cTemp.data, requires_grad = True)
         #self.G = Variable(goal_out.data, requires_grad = True)
 
-
         tempX = self.env.forward(actions)
         self.X = Variable(tempX.data, requires_grad = True)
 
@@ -249,11 +254,16 @@ class Controller():
     
     def run(self, t):
         for iter_ in range(t):
+            print self.img_dir
             if iter_ == t - 1: 
                 print self.env.expose_world_state()[0]
                 self.step(debug=True)
             else:
                 self.step()
+            
+            # visualize every 10 time steps
+            if iter_ % 10 == 0:
+                draw(self.env.world_state_agents, name=self.img_dir +'vis'+str(iter_)+'.png')
 
         
 
