@@ -63,7 +63,8 @@ class Controller():
                  comm_output_size = self.comm_output_size,
                  hidden_input_size=self.hidden_input_size, input_output_size=self.input_output_size,
                  hidden_output_size=self.hidden_output_size,
-                 memory_size = 32, goal_size = GOAL_DIM, is_cuda = runtime_config.use_cuda, dropout_prob = 0.1)
+                 memory_size = 32, goal_size = GOAL_DIM, is_cuda = runtime_config.use_cuda, dropout_prob = 0.1,
+                 is_goal_predicting = True)
 
         if runtime_config.use_cuda:
             print "running cuda"
@@ -113,11 +114,18 @@ class Controller():
             self.comm_counts = self.comm_counts.cuda()
 
 
-   
-    def compute_prediction_loss(self):
-        # can only be completed once the agent network is also predicting goals
-        return 0
-    
+    ##predictions are N x goal x N
+    def compute_prediction_loss(self, predictions):
+        goals = self.G ## goal x N
+        ret = 0.0
+        for i in range(self.num_agents):
+            for j in range(self.num_agents):
+                if i == j: continue
+                  i_prediction_j = predictions[i,:,j]
+                  j_true = goals[:,j]
+                  ret += torch.norm(i_prediction_j - j_true)
+        return -1.0 * ret
+
     def compute_comm_loss(self):
         # for penalizing large vocabulary sizes
         # probs should all be greater than 
@@ -217,7 +225,7 @@ class Controller():
             self.mem = self.mem.cuda()
 
 
-        actions, cTemp, MemTemp, memTemp = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
+        actions, cTemp, MemTemp, memTemp, goal_out = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
         self.update_phys_loss(actions)
 
 
@@ -226,6 +234,7 @@ class Controller():
         self.Mem = Variable(MemTemp.data, requires_grad = True)
         self.mem = Variable(memTemp.data, requires_grad = True)
         self.C = Variable(cTemp.data, requires_grad = True)
+        self.G = Variable(goal_out.data, requires_grad = True)
 
 
         tempX = self.env.forward(actions)
