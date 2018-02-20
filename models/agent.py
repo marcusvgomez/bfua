@@ -116,6 +116,7 @@ class agent(nn.Module):
         C = C.repeat(self.num_agents, 1, 1)
         X = X.repeat(self.num_agents, 1, 1)
 
+
         communication_input = torch.cat([C, M], 2) #concatenate along the first direction
 
         #(comm_size + goal_size) x ___ x N
@@ -139,6 +140,7 @@ class agent(nn.Module):
           goal_out = torch.cat(goal_results)
 
 
+
         loc_output = self.input_FC(X)
         loc_pool = self.softmaxPool(loc_output, dim = 1).squeeze() #this is bad for now need to fix later
 
@@ -152,21 +154,21 @@ class agent(nn.Module):
                                                 output[:, self.action_dim + self.vocab_size: self.action_dim + self.vocab_size + self.memory_size * self.num_agents],\
                                                 output[:, self.action_dim + self.vocab_size + self.memory_size * self.num_agents: ]
 
-        
-	epsilon_noise = make_epsilon_noise()
-	if self.use_cuda:
-		epsilon_noise = epsilon_noise.cuda()
-        action_output = psi_u + epsilon_noise
-	
+        epsilon_noise = make_epsilon_noise()
+        if self.use_cuda:
+            epsilon_noise = epsilon_noise.cuda()
+            action_output = psi_u + epsilon_noise
+    
 
 #        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, -1)#self.num_agents)
-	mem_mm_delta = mem_mm_delta.contiguous().view(-1, self.memory_size, self.num_agents)
+        mem_mm_delta = mem_mm_delta.contiguous().view(-1, self.memory_size, self.num_agents)
         if is_training:
             communication_output = self.gumbel_softmax(psi_c)
         else:
             psi_c_log = self.softmax(psi_c)
             cat = Categorical(probs=psi_c_log)
             communication_output = cat.sample()
+
 
         #memory updates
         M_eps = make_epsilon_noise()

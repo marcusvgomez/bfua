@@ -74,12 +74,12 @@ class Controller():
         # own reference frame. TODO: probably not N+M for observations of all other objects
         # maybe X can just be a tensor and not a variable since it's not being trained
         # can X get its initial value from env?
-        self.X = Variable(torch.randn(STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=False)
+        self.X = Variable(torch.randn(STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
         
         self.C = Variable(torch.randn(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         
         # create memory bank Tensors??
-        self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype))
+        self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
         
         # create goals
         self.G = self.specify_goals()
@@ -89,16 +89,30 @@ class Controller():
         # keeps track of the utterances 
 
         #TODO: Need to properly implement memory
-        self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype))
-        self.comm_counts = torch.Tensor(self.K).type(dtype)
+        self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype), requires_grad = True)
+        self.comm_counts = Variable(torch.zeros(self.K).type(dtype), requires_grad = True)
 	if runtime_config.use_cuda:
 		self.comm_counts = self.comm_counts.cuda()
     
     def reset(self):
+        del self.physical_losses[:]
+        self.env.clear()
+        del self.G
+
         self.env = env(num_agents=self.N, num_landmarks=self.M, is_cuda=self.runtime_config.use_cuda)
+        self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
+        self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype), requires_grad = True)
         self.G = self.specify_goals()
+        
         self.physical_losses = []
-        self.comm_counts = torch.Tensor(self.K).type(dtype)
+        self.comm_counts = torch.zeros(self.K).type(dtype)
+
+        if self.runtime_config.use_cuda:
+            self.Mem = self.Mem.cuda()
+            self.mem = self.mem.cuda()
+            self.G = self.G.cuda()
+            self.comm_counts = self.comm_counts.cuda()
+
 
     ##predictions are N x goal x N
     def compute_prediction_loss(self, predictions):
@@ -115,9 +129,9 @@ class Controller():
     def compute_comm_loss(self):
         # for penalizing large vocabulary sizes
         # probs should all be greater than 
-	return 0
         probs = self.comm_counts / (self.dirichlet_alpha + torch.sum(self.comm_counts) - 1.)
         r_c = torch.sum(self.comm_counts * torch.log(probs))
+        # print "comm reward is: ", r_c
         return -r_c
     
     def compute_physical_loss(self):
@@ -126,6 +140,7 @@ class Controller():
     def compute_loss(self):
         # TODO: fill in these rewards. Physical will come from env.
         physical_loss = self.compute_physical_loss()
+        # print "physical loss is: ", physical_loss.data[0]
         prediction_loss = self.compute_prediction_loss()
         comm_loss = self.compute_comm_loss()
         self.loss = -(physical_loss + prediction_loss + comm_loss)
@@ -159,11 +174,12 @@ class Controller():
                 goals[i, 4] = y
                 goals[i, 5] = target_agent
 
-        return Variable(goals.type(dtype), requires_grad = False)
+        return Variable(goals.type(dtype), requires_grad = True)
     
     def update_comm_counts(self):
         # update counts for each communication utterance.
         # interpolated as a float for differentiability, used in comm_reward 
+
         comms = torch.sum(self.C, dim=1)
         self.comm_counts += comms.data
     
@@ -172,6 +188,7 @@ class Controller():
         goals = self.G ## GOAL_DIM x N
         loss_t = 0.0
         for i in range(self.N):
+            if i != 2: continue
             g_a_i = goals[:,i]
             g_a_r = int(g_a_i[GOAL_DIM - 1].data[0])
             r_bar = g_a_i[3:5]
@@ -208,12 +225,23 @@ class Controller():
             self.mem = self.mem.cuda()
 
 
-        actions, self.C, self.Mem, self.mem, goal_out = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
-        # self.updateMemory(mem_mm_delta, mem_delta)
-        self.X = self.env.forward(actions)
-        
-        #self.update_comm_counts()
+        actions, cTemp, MemTemp, memTemp, goal_out = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
         self.update_phys_loss(actions)
+
+
+        #not sure where 
+        # actions = Variable(actions.data, requires_grad = False)
+        self.Mem = Variable(MemTemp.data, requires_grad = True)
+        self.mem = Variable(memTemp.data, requires_grad = True)
+        self.C = Variable(cTemp.data, requires_grad = True)
+        self.G = Variable(goal_out.data, requires_grad = True)
+
+
+        tempX = self.env.forward(actions)
+        self.X = Variable(tempX.data, requires_grad = True)
+
+        
+        self.update_comm_counts()
         if debug: print actions
     
     def run(self, t):
