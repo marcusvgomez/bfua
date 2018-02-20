@@ -57,7 +57,7 @@ def draw(agent_state, name='visualization.png'):
         g_x, g_y = int(gaze_x / CLIP_BOUND * max_dist), int(gaze_y / CLIP_BOUND * max_dist)
         cv2.arrowedLine(img, (CENTER + x, CENTER + y), (CENTER + x + g_x, CENTER + y + g_y), color=GRAY, thickness=2)
         
-    cv2.imwrite(PATH + name, img)
+    cv2.imwrite(name, img)
 
 
 if __name__ == '__main__':

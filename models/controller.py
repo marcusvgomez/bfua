@@ -26,10 +26,10 @@ from utils import *
 dtype = torch.FloatTensor
 
 GOAL_DIM = 3 + 2 + 1
-GLOBAL_ITER = 0
 
 class Controller():
     def __init__(self, runtime_config):
+        self.GLOBAL_ITER = 0
         # params. Could probably make this a global constant instead of instance variable
         # but this works too
         self.N = runtime_config.num_agents
@@ -248,7 +248,7 @@ class Controller():
         tempX = self.env.forward(actions)
         self.X = Variable(tempX.data, requires_grad = True)
 
-        GLOBAL_ITER += 1
+        self.GLOBAL_ITER += 1
         self.update_comm_counts()
         if debug: print actions
     
@@ -262,8 +262,8 @@ class Controller():
                 self.step()
             
             # visualize every 10 time steps
-            if GLOBAL_ITER % 10 == 0:
-                draw(self.env.world_state_agents, name=self.img_dir +'vis'+str(GLOBAL_ITER)+'.png')
+            if self.GLOBAL_ITER % 10 == 0:
+                draw(self.env.world_state_agents, name=self.img_dir +'vis'+str(self.GLOBAL_ITER)+'.png')
 
         
 
