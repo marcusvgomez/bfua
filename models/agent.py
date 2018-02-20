@@ -50,7 +50,7 @@ class agent(nn.Module):
         self.input_size = input_size
         self.dropout_prob = dropout_prob
         self.action_dim = action_dim
-	self.use_cuda = is_cuda
+        self.use_cuda = is_cuda
 
         # print ("vocab size is: ", self.vocab_size + input_size)
 
@@ -130,14 +130,14 @@ class agent(nn.Module):
                                                 output[:, self.action_dim + self.vocab_size + self.memory_size * self.num_agents: ]
 
         
-	epsilon_noise = make_epsilon_noise()
-	if self.use_cuda:
-		epsilon_noise = epsilon_noise.cuda()
-        action_output = psi_u + epsilon_noise
-	
+        epsilon_noise = make_epsilon_noise()
+        if self.use_cuda:
+            epsilon_noise = epsilon_noise.cuda()
+            action_output = psi_u + epsilon_noise
+    
 
 #        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, -1)#self.num_agents)
-	mem_mm_delta = mem_mm_delta.contiguous().view(-1, self.memory_size, self.num_agents)
+        mem_mm_delta = mem_mm_delta.contiguous().view(-1, self.memory_size, self.num_agents)
         if is_training:
             communication_output = self.gumbel_softmax(psi_c)
         else:
@@ -145,9 +145,16 @@ class agent(nn.Module):
             cat = Categorical(probs=psi_c_log)
             communication_output = cat.sample()
 
+        M_eps = make_epsilon_noise()
+        m_eps = make_epsilon_noise()
+        if self.use_cuda:
+            M_eps = M_eps.cuda()
+            m_eps = m_eps.cuda()
+
+
         #memory updates
-        M = self.tanh(M.transpose(1,2) + mem_mm_delta + make_epsilon_noise())
-        m = self.tanh(m + mem_delta + make_epsilon_noise()).transpose(0,1)
+        M = self.tanh(M.transpose(1,2) + mem_mm_delta + M_eps)
+        m = self.tanh(m + mem_delta + m_eps).transpose(0,1)
 
         #transposing because we have to i think
         #I really need to check to make sure math stuff works

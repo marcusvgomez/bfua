@@ -34,10 +34,11 @@ class env:
         self.transform_R[2:4,0:2] = self.timestep * torch.eye(R_DIM)
         self.transform_R[4:6,2:4] = torch.eye(R_DIM)
 
-        self.transform_L = Variable(self.transform_L)
-        self.transform_R = Variable(self.transform_R)
-        self.world_state_agents = Variable(self.world_state_agents)
-        self.world_state_landmarks = Variable(self.world_state_landmarks)
+        self.transform_L = Variable(self.transform_L, requires_grad = True)
+        self.transform_R = Variable(self.transform_R, requires_grad = True)
+        self.world_state_agents = Variable(self.world_state_agents, requires_grad = True)
+        self.world_state_landmarks = Variable(self.world_state_landmarks, requires_grad = True)
+
 
 	if is_cuda:
 		self.transform_L = self.transform_L.cuda()
@@ -47,6 +48,12 @@ class env:
 
     def modify_world_state(self, agents, landmarks):
         pass
+
+    def clear(self):
+        del self.transform_L
+        del self.transform_R
+        del self.world_state_agents
+        del self.world_state_landmarks
 
     ##this is literally horrible design
     def expose_world_state(self): return self.world_state_agents, self.world_state_landmarks
@@ -88,5 +95,5 @@ class env:
                 row[offset + STATE_DIM*j + 6] = self.world_state_landmarks[6,j]
             """
             result[:,i] = row
-        return Variable(result)
+        return Variable(result, requires_grad = True)
         

@@ -30,9 +30,25 @@ from torch.nn.parameter import Parameter
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import datetime
+import shutil
+
+import gc
+
+
+def getTime():
+    return datetime.datetime.now().strftime("%d-%H-%M-%s")
+
+save_path = '/cvgl2/u/bcui/cs234/results/'
+model_name = 'communication_reinforce'
+currTime = getTime()
+print currTime
+save_model_name = save_path + model_name + " date " + currTime + ".pt"
+best_name = save_path + "best/" + model_name + " date " + currTime + ".pt"
+
 
 #model saving code
-def save_model(model, optimizer, epoch_num, best_dev_acc, modelName, bestModelName, is_best = False):
+def save_model(model, optimizer, epoch_num, best_dev_acc, modelName = save_model_name, bestModelName = best_name, is_best = False):
     state = {'epoch': epoch_num + 1,
              'state_dict': model.state_dict(),
              'best_dev_acc': best_dev_acc,
@@ -40,11 +56,12 @@ def save_model(model, optimizer, epoch_num, best_dev_acc, modelName, bestModelNa
             }
     torch.save(state, modelName)
     if is_best:
-        shutil.copyfile(modelName, bestModel)
+        shutil.copyfile(modelName, bestModelName)
 
 #updates the optimizer if we are going to do decay rates
-def updateOptimizer(optimizer, decay_rate = 10):
-    for param_group in self.optimizer.param_groups:
+def updateOptimizer(optimizer, decay_rate = 5):
+    print ("optimizing parameters")
+    for param_group in optimizer.param_groups:
         param_group['lr'] /= decay_rate
         print (param_group['lr'])
     return optimizer
@@ -95,26 +112,63 @@ def main():
 
     loss = []
     not_improved = 0
-    max_loss = float("-inf")
+    min_loss = float("inf")
+    save_loss = float("inf")
     for epoch in range(runtime_config.n_epochs):
 
-        controller.reset()
+        controller.reset() #resetting the controller
         epoch_loss = []
         # controller.run(runtime_config.time_horizon)
         controller.run(100)
         optimizer.zero_grad()
         total_loss = controller.compute_loss()
-        # total_loss.backward(retain_graph = True)
-        total_loss.backward(retain_graph = True)
+        total_loss.backward()#retain_variables = True) #This code is sketchy at best, not sure what it does 
         optimizer.step()
-        loss.append(total_loss)
+        # loss.append(total_loss.data[0])
+
         print "EPOCH IS: ", epoch, total_loss.data[0]
+
+
+        if epoch % 50 == 0:
+            save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
+            save_loss = min(save_loss, total_loss.data[0])
+
         #only runs if we are using optimizer decay
         # if total_loss.data[0] < max_loss and args.optimizer_decay:
-            # max_loss = total_loss
-            # updateOptimizer(optimizer, runtime_config.optimizer_decay_rate)
+        if total_loss.data[0] > min_loss:
+            not_improved += 1
+            if not_improved > 100:
+                max_loss = total_loss
+                optimizer = updateOptimizer(optimizer, runtime_config.optimizer_decay_rate)
+                not_improved = 0
+        else:
+            min_loss = min(min_loss, total_loss.data[0])
+            not_improved = 0
+
+        del total_loss
+
+        #this was done for memory checks
+        # if epoch %10 == 0:
+            # controller.reset()
+            # check_memory()
+        # if epoch == 1: assert False
+
+    print loss
+
 
     plot_loss(loss)
+
+def check_memory():
+    for obj in gc.get_objects():
+        if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+            # print(type(obj), obj.size())
+            del obj
+    counter = 0
+    for obj in gc.get_objects():
+        if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+            print(type(obj), obj.size())
+            counter +=1
+    print "number of parameters is: ", counter
 
 
 

@@ -36,7 +36,7 @@ class RuntimeConfig:
         #hyperparameters
         self.learning_rate = 0.005 if 'learning-rate' not in args else args['learning-rate']
         self.optimizer_decay = float("-inf") if 'optimizer-decay-epoch' not in args else args['optimizer-decay']
-        self.optimizer_decay_rate = 1 if 'optimizer-decay-rate' not in args else args['optimizer-decay-rate']
+        self.optimizer_decay_rate = 5 if 'optimizer-decay-rate' not in args else args['optimizer-decay-rate']
         self.dropout = 0 if 'dropout' not in args else args['dropout']
         self.dirichlet_alpha = 0.01 if 'dirichlet-alpha' not in args else args['dirichlet-alpha']
         self.deterministic_goals = True if 'deterministic-goals' not in args else args['deterministic-goals']
