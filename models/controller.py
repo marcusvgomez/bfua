@@ -89,7 +89,7 @@ class Controller():
 
         #TODO: Need to properly implement memory
         self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype), requires_grad = True)
-        self.comm_counts = torch.Tensor(self.K).type(dtype)
+        self.comm_counts = Variable(torch.zeros(self.K).type(dtype), requires_grad = True)
 	if runtime_config.use_cuda:
 		self.comm_counts = self.comm_counts.cuda()
     
@@ -104,7 +104,14 @@ class Controller():
         self.G = self.specify_goals()
         
         self.physical_losses = []
-        self.comm_counts = torch.Tensor(self.K).type(dtype)
+        self.comm_counts = torch.zeros(self.K).type(dtype)
+
+        if self.runtime_config.use_cuda:
+            self.Mem = self.Mem.cuda()
+            self.mem = self.mem.cuda()
+            self.G = self.G.cuda()
+            self.comm_counts = self.comm_counts.cuda()
+
 
    
     def compute_prediction_loss(self):
@@ -114,9 +121,9 @@ class Controller():
     def compute_comm_loss(self):
         # for penalizing large vocabulary sizes
         # probs should all be greater than 
-	return 0
         probs = self.comm_counts / (self.dirichlet_alpha + torch.sum(self.comm_counts) - 1.)
         r_c = torch.sum(self.comm_counts * torch.log(probs))
+        # print "comm reward is: ", r_c
         return -r_c
     
     def compute_physical_loss(self):
@@ -125,9 +132,9 @@ class Controller():
     def compute_loss(self):
         # TODO: fill in these rewards. Physical will come from env.
         physical_loss = self.compute_physical_loss()
+        # print "physical loss is: ", physical_loss.data[0]
         prediction_loss = self.compute_prediction_loss()
         comm_loss = self.compute_comm_loss()
-        print "physical loss len is: ", len(self.physical_losses)
         self.loss = -(physical_loss + prediction_loss + comm_loss)
         return self.loss
 
@@ -164,7 +171,7 @@ class Controller():
     def update_comm_counts(self):
         # update counts for each communication utterance.
         # interpolated as a float for differentiability, used in comm_reward 
-        return
+
         comms = torch.sum(self.C, dim=1)
         self.comm_counts += comms.data
     
@@ -225,7 +232,7 @@ class Controller():
         self.X = Variable(tempX.data, requires_grad = True)
 
         
-        #self.update_comm_counts()
+        self.update_comm_counts()
         if debug: print actions
     
     def run(self, t):

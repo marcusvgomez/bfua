@@ -45,6 +45,7 @@ currTime = getTime()
 print currTime
 save_model_name = save_path + model_name + " date " + currTime + ".pt"
 best_name = save_path + "best/" + model_name + " date " + currTime + ".pt"
+loss_dir = save_path + "loss/" + model_name + " date " + currTime + ".pt"
 
 
 #model saving code
@@ -122,12 +123,12 @@ def main():
         controller.reset() #resetting the controller
         epoch_loss = []
         # controller.run(runtime_config.time_horizon)
-        controller.run(10)
+        controller.run(100)
         optimizer.zero_grad()
         total_loss = controller.compute_loss()
         total_loss.backward()#retain_variables = True) #This code is sketchy at best, not sure what it does 
         optimizer.step()
-        # loss.append(total_loss.data[0])
+        loss.append(total_loss.data[0])
         
 
         print "EPOCH IS: ", epoch, total_loss.data[0]
@@ -137,9 +138,9 @@ def main():
                 # print param
             # assert False
 
-        if epoch % 50 == 0:
-            save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
-            save_loss = min(save_loss, total_loss.data[0])
+#        if epoch % 50 == 0:
+#            save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
+#            save_loss = min(save_loss, total_loss.data[0])
 
         #only runs if we are using optimizer decay
         # if total_loss.data[0] < max_loss and args.optimizer_decay:
@@ -162,6 +163,9 @@ def main():
         # if epoch == 1: assert False
 
     print loss
+    return 
+    with open(loss_dir, "wb") as f:
+        f.write(str(loss))
 
 
     plot_loss(loss)

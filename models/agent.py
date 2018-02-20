@@ -111,10 +111,12 @@ class agent(nn.Module):
         C = C.repeat(self.num_agents, 1, 1)
         X = X.repeat(self.num_agents, 1, 1)
 
+
         communication_input = torch.cat([C, M], 2) #concatenate along the first direction
 
         comm_out = self.communication_FC(communication_input)
         comm_pool = self.softmaxPool(comm_out)
+
 
         loc_output = self.input_FC(X)
         loc_pool = self.softmaxPool(loc_output, dim = 1).squeeze() #this is bad for now need to fix later
