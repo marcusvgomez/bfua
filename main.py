@@ -132,7 +132,7 @@ def main():
         
 
         print "EPOCH IS: ", epoch, total_loss.data[0]
-        draw(controller.env.world_state_agents, 'vis' + str(epoch))
+        draw(controller.env.world_state_agents, 'vis' + str(epoch) + '.png')
 
 
         if epoch % 50 == 0:

@@ -19,7 +19,7 @@ from torch.nn.parameter import Parameter
 from torch.distributions import Categorical
 
 from env import STATE_DIM, ACTION_DIM
-#from controller import GOAL_DIM
+GOAL_DIM = 6
 '''
 Agent operating in the environment 
 
@@ -56,7 +56,10 @@ class agent(nn.Module):
 	self.use_cuda = is_cuda
         self.is_goal_predicting = is_goal_predicting
         self.comm_output_size = comm_output_size
-        if is_goal_predicting: comm_output_size = comm_output_size + GOAL_DIM 
+        if self.is_goal_predicting: 
+          self.goal_dim = GOAL_DIM 
+        else:
+          self.goal_dim = 0
 
         # print ("vocab size is: ", self.vocab_size + input_size)
 
@@ -65,7 +68,7 @@ class agent(nn.Module):
                 nn.Linear(vocab_size + memory_size, hidden_comm_size),
                 nn.ELU(),
                 nn.Dropout(dropout_prob),
-                nn.Linear(hidden_comm_size, comm_output_size)
+                nn.Linear(hidden_comm_size, comm_output_size + self.goal_dim)
             )
 
         self.input_FC = nn.Sequential(
@@ -105,6 +108,7 @@ class agent(nn.Module):
     Runs a forward pass of the neural network spitting out the action and communication actions
     '''
     def forward(self, inputs):
+        print "in forwards"
         X, C, g, M, m, is_training = inputs
         #reshaping everything for sanity
         M = M.transpose(1, 2)
@@ -132,14 +136,14 @@ class agent(nn.Module):
           comm_results = []
           goal_results = []
           for i in range(self.num_agents):
-            comm_i = comm_out[0:self.comm_output_size,:,i]
-            goal_i = comm_out[self.comm_output_size:,:,i]
-            comm_results.append(comm_i)
-            goal_results.append(goal_i)
+            comm_i = comm_out[i,:,0:self.comm_output_size]
+            goal_i = comm_out[i,:,self.comm_output_size:]
+            comm_results.append(torch.unsqueeze(comm_i, 0))
+            goal_results.append(torch.unsqueeze(goal_i, 0))
           comm_intermediate = torch.cat(comm_results, 0)
           comm_pool = self.softmaxPool(comm_intermediate)
           goal_out = torch.cat(goal_results)
-
+        
 
 
         loc_output = self.input_FC(X)
@@ -158,7 +162,7 @@ class agent(nn.Module):
         epsilon_noise = make_epsilon_noise()
         if self.use_cuda:
             epsilon_noise = epsilon_noise.cuda()
-            action_output = psi_u + epsilon_noise
+        action_output = psi_u + epsilon_noise
     
 
 #        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, -1)#self.num_agents)
