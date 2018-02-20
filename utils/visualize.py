@@ -12,11 +12,12 @@ GRAY = (120, 120, 120)
 
 def convert_color(c):
     # converts int color c in our state to rgb
-    if c == 0:
+    cp = int(c.data[0])
+    if cp == 0:
         return (255, 0, 0)
-    elif c == 1:
+    elif cp == 1:
         return (0, 255, 0)
-    elif c == 2:
+    elif cp == 2:
         return (0, 0, 255)
     else:
         return (30, 30, 30)

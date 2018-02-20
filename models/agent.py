@@ -107,6 +107,7 @@ class agent(nn.Module):
     Runs a forward pass of the neural network spitting out the action and communication actions
     '''
     def forward(self, inputs):
+        print "in forwards"
         X, C, g, M, m, is_training = inputs
         #reshaping everything for sanity
         M = M.transpose(1, 2)
@@ -136,12 +137,9 @@ class agent(nn.Module):
           for i in range(self.num_agents):
             comm_i = comm_out[i,:,0:self.comm_output_size]
             goal_i = comm_out[i,:,self.comm_output_size:]
-            comm_results.append(comm_i)
-            goal_results.append(goal_i)
-          print comm_results[0].shape
-          print comm_results
+            comm_results.append(torch.unsqueeze(comm_i, 0))
+            goal_results.append(torch.unsqueeze(goal_i, 0))
           comm_intermediate = torch.cat(comm_results, 0)
-          print comm_intermediate
           comm_pool = self.softmaxPool(comm_intermediate)
           goal_out = torch.cat(goal_results)
         
@@ -150,7 +148,6 @@ class agent(nn.Module):
         loc_output = self.input_FC(X)
         loc_pool = self.softmaxPool(loc_output, dim = 1).squeeze() #this is bad for now need to fix later
 
-        print comm_pool, m, loc_pool, g
 
         #concatenation of pooled communication, location, goal, and memory
         output_input = torch.cat([comm_pool, m, loc_pool, g], 1)
@@ -164,7 +161,7 @@ class agent(nn.Module):
         epsilon_noise = make_epsilon_noise()
         if self.use_cuda:
             epsilon_noise = epsilon_noise.cuda()
-            action_output = psi_u + epsilon_noise
+        action_output = psi_u + epsilon_noise
     
 
 #        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, -1)#self.num_agents)
