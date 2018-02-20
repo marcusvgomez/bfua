@@ -19,7 +19,7 @@ from torch.nn.parameter import Parameter
 from torch.distributions import Categorical
 
 from env import STATE_DIM, ACTION_DIM
-from controller import GOAL_DIM
+GOAL_DIM = 6
 '''
 Agent operating in the environment 
 
@@ -55,7 +55,10 @@ class agent(nn.Module):
 	self.use_cuda = is_cuda
         self.is_goal_predicting = is_goal_predicting
         self.comm_output_size = comm_output_size
-        if is_goal_predicting: comm_output_size = comm_output_size + GOAL_DIM 
+        if self.is_goal_predicting: 
+          self.goal_dim = GOAL_DIM 
+        else:
+          self.goal_dim = 0
 
         # print ("vocab size is: ", self.vocab_size + input_size)
 
@@ -64,7 +67,7 @@ class agent(nn.Module):
                 nn.Linear(vocab_size + memory_size, hidden_comm_size),
                 nn.ELU(),
                 nn.Dropout(dropout_prob),
-                nn.Linear(hidden_comm_size, comm_output_size)
+                nn.Linear(hidden_comm_size, comm_output_size + self.goal_dim)
             )
 
         self.input_FC = nn.Sequential(
@@ -131,19 +134,23 @@ class agent(nn.Module):
           comm_results = []
           goal_results = []
           for i in range(self.num_agents):
-            comm_i = comm_out[0:self.comm_output_size,:,i]
-            goal_i = comm_out[self.comm_output_size:,:,i]
+            comm_i = comm_out[i,:,0:self.comm_output_size]
+            goal_i = comm_out[i,:,self.comm_output_size:]
             comm_results.append(comm_i)
             goal_results.append(goal_i)
+          print comm_results[0].shape
+          print comm_results
           comm_intermediate = torch.cat(comm_results, 0)
+          print comm_intermediate
           comm_pool = self.softmaxPool(comm_intermediate)
           goal_out = torch.cat(goal_results)
-
+        
 
 
         loc_output = self.input_FC(X)
         loc_pool = self.softmaxPool(loc_output, dim = 1).squeeze() #this is bad for now need to fix later
 
+        print comm_pool, m, loc_pool, g
 
         #concatenation of pooled communication, location, goal, and memory
         output_input = torch.cat([comm_pool, m, loc_pool, g], 1)

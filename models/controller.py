@@ -121,9 +121,9 @@ class Controller():
         for i in range(self.num_agents):
             for j in range(self.num_agents):
                 if i == j: continue
-                  i_prediction_j = predictions[i,:,j]
-                  j_true = goals[:,j]
-                  ret += torch.norm(i_prediction_j - j_true)
+                i_prediction_j = predictions[i,:,j]
+                j_true = goals[:,j]
+                ret += torch.norm(i_prediction_j - j_true)
         return -1.0 * ret
 
     def compute_comm_loss(self):
