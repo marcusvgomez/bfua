@@ -145,14 +145,13 @@ class agent(nn.Module):
             cat = Categorical(probs=psi_c_log)
             communication_output = cat.sample()
 
+
+        #memory updates
         M_eps = make_epsilon_noise()
         m_eps = make_epsilon_noise()
         if self.use_cuda:
             M_eps = M_eps.cuda()
             m_eps = m_eps.cuda()
-
-
-        #memory updates
         M = self.tanh(M.transpose(1,2) + mem_mm_delta + M_eps)
         m = self.tanh(m + mem_delta + m_eps).transpose(0,1)
 

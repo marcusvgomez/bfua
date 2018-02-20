@@ -140,9 +140,9 @@ class Controller():
         goals = torch.FloatTensor(GOAL_DIM, self.N).zero_()
         if self.deterministic_goals:
             # agent 0's goal is to get agent 1 to go to (5, 5)
-            goals[:, 0] = torch.FloatTensor([1, 0, 0, 5, 5, 1])
+            goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 1])
             # agent 1's goal is to get agent 0 to look UP at (0, 1)
-            goals[:, 1] = torch.FloatTensor([0, 1, 0, 0, 1, 0])
+            goals[:, 1] = torch.FloatTensor([0, 0, 1, 0, 1, 0])
             # agent 2's goal is to send itself to (-5, -5)
             goals[:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
             # the rest just do nothing
@@ -223,7 +223,7 @@ class Controller():
         self.X = Variable(self.X.data, requires_grad = True)
 
         
-        self.update_comm_counts()
+        #self.update_comm_counts()
         self.update_phys_loss(actions)
         if debug: print actions
     
