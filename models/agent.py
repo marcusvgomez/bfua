@@ -129,7 +129,6 @@ class agent(nn.Module):
                                                 output[:, self.action_dim + self.vocab_size: self.action_dim + self.vocab_size + self.memory_size * self.num_agents],\
                                                 output[:, self.action_dim + self.vocab_size + self.memory_size * self.num_agents: ]
 
-        
         epsilon_noise = make_epsilon_noise()
         if self.use_cuda:
             epsilon_noise = epsilon_noise.cuda()

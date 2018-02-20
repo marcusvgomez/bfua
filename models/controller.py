@@ -211,20 +211,21 @@ class Controller():
 
 
         actions, cTemp, MemTemp, memTemp = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
+        self.update_phys_loss(actions)
+
 
         #not sure where 
-        actions = Variable(actions.data, requires_grad = True)
+        # actions = Variable(actions.data, requires_grad = False)
         self.Mem = Variable(MemTemp.data, requires_grad = True)
         self.mem = Variable(memTemp.data, requires_grad = True)
         self.C = Variable(cTemp.data, requires_grad = True)
 
 
         tempX = self.env.forward(actions)
-        self.X = Variable(self.X.data, requires_grad = True)
+        self.X = Variable(tempX.data, requires_grad = True)
 
         
         #self.update_comm_counts()
-        self.update_phys_loss(actions)
         if debug: print actions
     
     def run(self, t):

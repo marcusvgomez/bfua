@@ -115,6 +115,9 @@ def main():
     min_loss = float("inf")
     save_loss = float("inf")
     for epoch in range(runtime_config.n_epochs):
+        # for param in controller.agent_trainable.parameters():
+            # print param
+
 
         controller.reset() #resetting the controller
         epoch_loss = []
@@ -125,9 +128,14 @@ def main():
         total_loss.backward()#retain_variables = True) #This code is sketchy at best, not sure what it does 
         optimizer.step()
         # loss.append(total_loss.data[0])
+        
 
         print "EPOCH IS: ", epoch, total_loss.data[0]
 
+        # if epoch == 1:
+            # for param in controller.agent_trainable.parameters():
+                # print param
+            # assert False
 
         if epoch % 50 == 0:
             save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
@@ -137,7 +145,7 @@ def main():
         # if total_loss.data[0] < max_loss and args.optimizer_decay:
         if total_loss.data[0] > min_loss:
             not_improved += 1
-            if not_improved > 100:
+            if not_improved > 1000:
                 max_loss = total_loss
                 optimizer = updateOptimizer(optimizer, runtime_config.optimizer_decay_rate)
                 not_improved = 0
