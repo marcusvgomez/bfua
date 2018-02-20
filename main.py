@@ -134,10 +134,6 @@ def main():
         print "EPOCH IS: ", epoch, total_loss.data[0]
         draw(controller.env.world_state_agents, 'vis' + str(epoch))
 
-        # if epoch == 1:
-            # for param in controller.agent_trainable.parameters():
-                # print param
-            # assert False
 
         if epoch % 50 == 0:
             save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
