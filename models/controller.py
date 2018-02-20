@@ -63,7 +63,8 @@ class Controller():
                  comm_output_size = self.comm_output_size,
                  hidden_input_size=self.hidden_input_size, input_output_size=self.input_output_size,
                  hidden_output_size=self.hidden_output_size,
-                 memory_size = 32, goal_size = GOAL_DIM, is_cuda = runtime_config.use_cuda, dropout_prob = 0.1)
+                 memory_size = 32, goal_size = GOAL_DIM, is_cuda = runtime_config.use_cuda, dropout_prob = 0.1,
+                 is_goal_predicting = True)
 
         if runtime_config.use_cuda:
             print "running cuda"
@@ -99,11 +100,18 @@ class Controller():
         self.physical_losses = []
         self.comm_counts = torch.Tensor(self.K).type(dtype)
 
-   
-    def compute_prediction_loss(self):
-        # can only be completed once the agent network is also predicting goals
-        return 0
-    
+    ##predictions are N x goal x N
+    def compute_prediction_loss(self, predictions):
+        goals = self.G ## goal x N
+        ret = 0.0
+        for i in range(self.num_agents):
+            for j in range(self.num_agents):
+                if i == j: continue
+                  i_prediction_j = predictions[i,:,j]
+                  j_true = goals[:,j]
+                  ret += torch.norm(i_prediction_j - j_true)
+        return -1.0 * ret
+
     def compute_comm_loss(self):
         # for penalizing large vocabulary sizes
         # probs should all be greater than 
@@ -200,7 +208,7 @@ class Controller():
             self.mem = self.mem.cuda()
 
 
-        actions, self.C, self.Mem, self.mem = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
+        actions, self.C, self.Mem, self.mem, goal_out = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
         # self.updateMemory(mem_mm_delta, mem_delta)
         self.X = self.env.forward(actions)
         

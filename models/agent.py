@@ -19,6 +19,7 @@ from torch.nn.parameter import Parameter
 from torch.distributions import Categorical
 
 from env import STATE_DIM, ACTION_DIM
+from controller import GOAL_DIM
 '''
 Agent operating in the environment 
 
@@ -41,7 +42,8 @@ class agent(nn.Module):
                  input_size, hidden_comm_size, comm_output_size,
                  hidden_input_size, input_output_size,
                  hidden_output_size, action_dim = ACTION_DIM,
-                 memory_size = 32, goal_size = 6, is_cuda = False, dropout_prob = 0.0):
+                 memory_size = 32, goal_size = 6, is_cuda = False, dropout_prob = 0.0,
+                 is_goal_predicting = False):
         super(agent, self).__init__()
         self.num_agents = num_agents
         self.num_landmarks = num_landmarks
@@ -51,6 +53,9 @@ class agent(nn.Module):
         self.dropout_prob = dropout_prob
         self.action_dim = action_dim
 	self.use_cuda = is_cuda
+        self.is_goal_predicting = is_goal_predicting
+        self.comm_output_size = comm_output_size
+        if is_goal_predicting: comm_output_size = comm_output_size + GOAL_DIM 
 
         # print ("vocab size is: ", self.vocab_size + input_size)
 
@@ -94,7 +99,7 @@ class agent(nn.Module):
     X: (N + M) x input_size matrix that represents the coordinates of other agents/landmarks
     C: N x communication_size matrix that represents the communication of all other agents
     g: goal vector always represented in R^3
-    M: N x memory_size communcation memory matrix 
+    M: N x memory_size communcation memory matrix N by memory_size by N 
     m: state memory 
     Runs a forward pass of the neural network spitting out the action and communication actions
     '''
@@ -113,8 +118,26 @@ class agent(nn.Module):
 
         communication_input = torch.cat([C, M], 2) #concatenate along the first direction
 
-        comm_out = self.communication_FC(communication_input)
-        comm_pool = self.softmaxPool(comm_out)
+        #(comm_size + goal_size) x ___ x N
+        #(comm_size) x __ x N, (goal) x __ x N
+
+        if not self.is_goal_predicting: 
+          comm_out = self.communication_FC(communication_input)
+          comm_pool = self.softmaxPool(comm_out)
+          goal_out = None
+        else:
+          comm_out = self.communication_FC(communication_input)
+          comm_results = []
+          goal_results = []
+          for i in range(self.num_agents):
+            comm_i = comm_out[0:self.comm_output_size,:,i]
+            goal_i = comm_out[self.comm_output_size:,:,i]
+            comm_results.append(comm_i)
+            goal_results.append(goal_i)
+          comm_intermediate = torch.cat(comm_results, 0)
+          comm_pool = self.softmaxPool(comm_intermediate)
+          goal_out = torch.cat(goal_results)
+
 
         loc_output = self.input_FC(X)
         loc_pool = self.softmaxPool(loc_output, dim = 1).squeeze() #this is bad for now need to fix later
@@ -159,7 +182,7 @@ class agent(nn.Module):
         action_output = action_output.transpose(0,1)
         communication_output = communication_output.transpose(0,1)
        
-        return action_output, communication_output, M, m
+        return action_output, communication_output, M, m, goal_out
 
     '''
     Runs a softmax pool which is taking the softmax for all entries
