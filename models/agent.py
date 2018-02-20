@@ -19,7 +19,7 @@ from torch.nn.parameter import Parameter
 from torch.distributions import Categorical
 
 from env import STATE_DIM, ACTION_DIM
-from controller import GOAL_DIM
+#from controller import GOAL_DIM
 '''
 Agent operating in the environment 
 
@@ -37,6 +37,7 @@ memory_size: size of the memory bank
 goal_size: size of the goal
 is_cuda: are we using cuda
 '''
+GOAL_DIM = 6
 class agent(nn.Module):
     def __init__(self, num_agents, vocab_size, num_landmarks,
                  input_size, hidden_comm_size, comm_output_size,
