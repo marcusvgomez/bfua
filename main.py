@@ -13,7 +13,7 @@ from agent import *
 from controller import *
 from env import *
 from config import *
-
+from visualize import draw
 
 #torch imports
 import torch
@@ -132,6 +132,7 @@ def main():
         
 
         print "EPOCH IS: ", epoch, total_loss.data[0]
+        draw(controller.env.world_state_agents, 'vis' + str(epoch))
 
         # if epoch == 1:
             # for param in controller.agent_trainable.parameters():
