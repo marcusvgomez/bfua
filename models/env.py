@@ -21,6 +21,11 @@ class env:
         self.damping_coef = damping_coef # this is 1 - gamma
         self.gamma = 1 - self.damping_coef
         self.world_state_agents = torch.FloatTensor(STATE_DIM, self.num_agents).zero_()
+        ##agent 0 is at (0,0)
+        self.world_state_agents[0,1] = 10.0 ##init agent 1 at (10,10) 
+        self.world_state_agents[1,1] = 10.0
+        self.world_state_agents[0,2] = -10.0
+        self.world_state_agents[1,2] = -10.0
         self.world_state_landmarks = torch.FloatTensor(STATE_DIM, self.num_landmarks).zero_()
 
         

@@ -143,6 +143,7 @@ class agent(nn.Module):
           comm_intermediate = torch.cat(comm_results, 0)
           comm_pool = self.softmaxPool(comm_intermediate)
           goal_out = torch.cat(goal_results)
+          goal_out = goal_out.transpose(1,2)
         
 
 

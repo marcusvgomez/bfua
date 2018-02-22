@@ -45,7 +45,8 @@ class Controller():
 
 
         self.dirichlet_alpha = runtime_config.dirichlet_alpha
-        self.deterministic_goals = runtime_config.deterministic_goals
+        #self.deterministic_goals = runtime_config.deterministic_goals
+        self.deterministic_goals = False
 
         self.runtime_config = runtime_config
         
@@ -95,11 +96,11 @@ class Controller():
             self.comm_counts = self.comm_counts.cuda()
         
         # make directory for storing visualizations
-        self.img_dir = os.path.dirname(__file__) + '/../imgs/' + time.strftime('%m%d-%I%M') + '/'
-        try:
-            os.mkdir(self.img_dir[:-1])
-        except OSError as err:
-            pass
+        # self.img_dir = os.path.dirname(__file__) + '/../imgs/' + time.strftime('%m%d-%I%M') + '/'
+        # try:
+        #     os.mkdir(self.img_dir[:-1])
+        # except OSError as err:
+        #     pass
     
     def reset(self):
         del self.physical_losses[:]
@@ -126,8 +127,8 @@ class Controller():
     def update_prediction_loss(self, predictions):
         goals = self.G ## goal x N
         ret = 0.0
-        for i in range(self.num_agents):
-            for j in range(self.num_agents):
+        for i in range(self.N):
+            for j in range(self.N):
                 if i == j: continue
                 i_prediction_j = predictions[i,:,j]
                 j_true = goals[:,j]
@@ -248,7 +249,9 @@ class Controller():
         tempX = self.env.forward(actions)
         self.X = Variable(tempX.data, requires_grad = True)
 
+
         self.GLOBAL_ITER += 1
+        self.update_prediction_loss(goal_out)
         self.update_comm_counts()
         if debug: print actions
     
@@ -260,10 +263,12 @@ class Controller():
                 self.step(debug=True)
             else:
                 self.step()
+
             
             # visualize every 10 time steps
             if self.GLOBAL_ITER % 10 == 0:
-                draw(self.env.world_state_agents, name=self.img_dir +'vis'+str(self.GLOBAL_ITER)+'.png')
+                pass
+                # draw(self.env.world_state_agents, name=self.img_dir +'vis'+str(self.GLOBAL_ITER)+'.png')
 
         
 

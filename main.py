@@ -77,7 +77,7 @@ def plot_loss(loss):
     plt.plot(x_axis, y_axis, label = 'o')
     plt.xlabel('Epoch Number')
     plt.ylabel('Loss')
-    plt.savefig('Loss_Deterministic_1Timestep.png')
+    plt.savefig('Loss_Deterministic_10Timesteps.png')
 
 def main():
     parser = argparse.ArgumentParser(description="Train time babbbyyyyyyyy")
@@ -118,7 +118,8 @@ def main():
     not_improved = 0
     min_loss = float("inf")
     save_loss = float("inf")
-    for epoch in range(runtime_config.n_epochs):
+    # for epoch in range(runtime_config.n_epochs):
+    for epoch in range(100000):
         # for param in controller.agent_trainable.parameters():
             # print param
 
@@ -126,7 +127,7 @@ def main():
         controller.reset() #resetting the controller
         epoch_loss = []
         # controller.run(runtime_config.time_horizon)
-        controller.run(3)
+        controller.run(10)
         optimizer.zero_grad()
         total_loss = controller.compute_loss()
         total_loss.backward()#retain_variables = True) #This code is sketchy at best, not sure what it does 
@@ -162,7 +163,7 @@ def main():
             # check_memory()
         # if epoch == 1: assert False
 
-    print loss
+    # print loss
     # with open(loss_dir, "wb") as f:
     #     f.write(str(loss))
 
