@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 import sys
 sys.path.append("./models")
 sys.path.append("./utils")
@@ -72,9 +75,9 @@ def plot_loss(loss):
     x_axis = [i for i in range(len(loss))]
     y_axis = loss
     plt.plot(x_axis, y_axis, label = 'o')
-    plt.xlabel = 'Epoch Number'
-    plt.ylabel = 'Loss'
-    plt.show()
+    plt.xlabel('Epoch Number')
+    plt.ylabel('Loss')
+    plt.savefig('Loss_Deterministic_1Timestep.png')
 
 def main():
     parser = argparse.ArgumentParser(description="Train time babbbyyyyyyyy")
@@ -123,7 +126,7 @@ def main():
         controller.reset() #resetting the controller
         epoch_loss = []
         # controller.run(runtime_config.time_horizon)
-        controller.run(100)
+        controller.run(3)
         optimizer.zero_grad()
         total_loss = controller.compute_loss()
         total_loss.backward()#retain_variables = True) #This code is sketchy at best, not sure what it does 
@@ -132,12 +135,12 @@ def main():
         
 
         print "EPOCH IS: ", epoch, total_loss.data[0]
-        draw(controller.env.world_state_agents, 'vis' + str(epoch) + '.png')
+        # draw(controller.env.world_state_agents, 'vis' + str(epoch) + '.png')
 
 
-        if epoch % 50 == 0:
-            save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
-            save_loss = min(save_loss, total_loss.data[0])
+        # if epoch % 50 == 0:
+        #     save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
+        #     save_loss = min(save_loss, total_loss.data[0])
 
         #only runs if we are using optimizer decay
         # if total_loss.data[0] < max_loss and args.optimizer_decay:
@@ -160,9 +163,8 @@ def main():
         # if epoch == 1: assert False
 
     print loss
-    return 
-    with open(loss_dir, "wb") as f:
-        f.write(str(loss))
+    # with open(loss_dir, "wb") as f:
+    #     f.write(str(loss))
 
 
     plot_loss(loss)

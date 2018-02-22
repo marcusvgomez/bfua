@@ -198,7 +198,7 @@ class Controller():
         goals = self.G ## GOAL_DIM x N
         loss_t = 0.0
         for i in range(self.N):
-            if i != 2: continue
+            # if i != 2: continue
             g_a_i = goals[:,i]
             g_a_r = int(g_a_i[GOAL_DIM - 1].data[0])
             r_bar = g_a_i[3:5]

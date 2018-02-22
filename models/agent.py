@@ -108,7 +108,7 @@ class agent(nn.Module):
     Runs a forward pass of the neural network spitting out the action and communication actions
     '''
     def forward(self, inputs):
-        print "in forwards"
+        
         X, C, g, M, m, is_training = inputs
         #reshaping everything for sanity
         M = M.transpose(1, 2)
