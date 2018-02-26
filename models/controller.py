@@ -173,7 +173,7 @@ class Controller():
             # agent 2's goal is to send itself to (-5, -5)
             goals[:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
             # the rest just do nothing
-            for i in range(2, self.N):
+            for i in range(3, self.N):
                 goals[2, i] = 1
         else:
             for i in range(self.N):
