@@ -166,19 +166,15 @@ class Controller():
         
         goals = torch.FloatTensor(GOAL_DIM, self.N).zero_()
         if self.deterministic_goals:
-            # agent 0's goal is to get agent 1 to go to (5, 5)
+            # ACTUALLY rn agent 0 is just doing to do nothing. simplest case for now. agent 0's old goal is to get agent 1 to go to (5, 5)
             goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 1])
-            # agent 1's goal is to get agent 0 to look UP at (0, 1)
+            # # ACTUALLY rn agent 1 goal is also to do nothing. agent 1's old goal is to get agent 0 to look UP at (0, 1)
             goals[:, 1] = torch.FloatTensor([0, 0, 1, 0, 1, 0])
             # agent 2's goal is to send itself to (-5, -5)
             goals[:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
             # the rest just do nothing
-            # for i in range(2, self.N):
-                # print "GOAL SETTING"
-                # assert False
-                # goals[2, i] = 1
-            # print goals
-            # assert False
+            for i in range(3, self.N):
+                goals[2, i] = 1
         else:
             for i in range(self.N):
                 action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing

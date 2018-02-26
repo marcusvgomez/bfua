@@ -119,7 +119,8 @@ def main():
     min_loss = float("inf")
     save_loss = float("inf")
     # for epoch in range(runtime_config.n_epochs):
-    for epoch in range(int(1e6)):
+    # for epoch in range(int(1e6)):
+    for epoch in range(5000):
         # for param in controller.agent_trainable.parameters():
             # print param
 
@@ -139,15 +140,15 @@ def main():
         # draw(controller.env.world_state_agents, 'vis' + str(epoch) + '.png')
 
 
-        if epoch % 50 == 0:
-             save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
-             save_loss = min(save_loss, total_loss.data[0])
+        # if epoch % 50 == 0:
+             # save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
+             # save_loss = min(save_loss, total_loss.data[0])
 
         #only runs if we are using optimizer decay
         # if total_loss.data[0] < max_loss and args.optimizer_decay:
         if total_loss.data[0] > min_loss:
             not_improved += 1
-            if not_improved > 10000:
+            if not_improved > 250:
                 max_loss = total_loss
                 optimizer = updateOptimizer(optimizer, runtime_config.optimizer_decay_rate)
                 not_improved = 0
@@ -165,7 +166,7 @@ def main():
 
     # print loss
     # with open(loss_dir, "wb") as f:
-    #     f.write(str(loss))
+        # f.write(str(loss))
 
 
     plot_loss(loss)
