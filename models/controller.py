@@ -74,7 +74,7 @@ class Controller():
         # can X get its initial value from env?
         self.X = Variable(torch.randn(STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
         
-        self.C = Variable(torch.randn(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
+        self.C = Variable(torch.zeros(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         self.G_loss = 0.0 
         # create memory bank Tensors??
         self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
@@ -115,12 +115,13 @@ class Controller():
         
         self.physical_losses = []
         self.comm_counts = torch.zeros(self.K).type(dtype)
-
+        self.C = Variable(torch.zeros(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         if self.runtime_config.use_cuda:
             self.Mem = self.Mem.cuda()
             self.mem = self.mem.cuda()
             self.G = self.G.cuda()
             self.comm_counts = self.comm_counts.cuda()
+            self.C = self.C.cuda()
 
 
     ##predictions are N x goal x N
@@ -178,12 +179,12 @@ class Controller():
             for i in range(self.N):
                 action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
                 x, y = np.random.uniform(-20.0, 20.0, size=(2,)) # TODO: have clearer bounds in env so these coordinates mean something
-                target_agent = np.random.randint(0, N)
+                target_agent = np.random.randint(0, self.N)
                 
-                goals[i, action_type] = 1
-                goals[i, 3] = x
-                goals[i, 4] = y
-                goals[i, 5] = target_agent
+                goals[action_type,i] = 1
+                goals[3,i] = x
+                goals[4,i] = y
+                goals[5,i] = target_agent
 
         return Variable(goals.type(dtype), requires_grad = True)
     
