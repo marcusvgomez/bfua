@@ -140,7 +140,7 @@ def main():
 
 
         if epoch % 50 == 0:
-             save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
+             #save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
              save_loss = min(save_loss, total_loss.data[0])
 
         #only runs if we are using optimizer decay
