@@ -153,8 +153,10 @@ class Controller():
         # TODO: fill in these rewards. Physical will come from env.
         physical_loss = self.compute_physical_loss()
         # print "physical loss is: ", physical_loss.data[0]
-        prediction_loss = self.compute_prediction_loss()
-        comm_loss = self.compute_comm_loss()
+        #prediction_loss = self.compute_prediction_loss()
+        #comm_loss = self.compute_comm_loss()
+        prediction_loss = 0.
+        comm_loss = 0.
         self.loss = -(physical_loss + prediction_loss + comm_loss)
         return self.loss
 
@@ -208,7 +210,7 @@ class Controller():
             if g_a_i.data[0] == 1:
                 p_t_r = world_state_agents[:,g_a_r][0:2]
                 try:
-                    loss_t += (p_t_r - r_bar).norm(2)
+                    loss_t += ((p_t_r - r_bar).norm(2))**2
                 except RuntimeError as e:
                     pass
                     # print "FUCK", p_t_r, r_bar
@@ -216,7 +218,7 @@ class Controller():
             elif g_a_i.data[1] == 1: 
                 v_t_r = world_state_agents[:,g_a_r][4:6]
                 try:
-                    loss_t += (v_t_r - r_bar).norm(2)
+                    loss_t += ((v_t_r - r_bar).norm(2))**2
                 except RuntimeError as e:
                     pass
                     # print "FUCK", v_t_r, 
@@ -251,16 +253,19 @@ class Controller():
         self.X = Variable(tempX.data, requires_grad = True)
 
 
-        self.GLOBAL_ITER += 1
+        # self.GLOBAL_ITER += 1
         self.update_prediction_loss(goal_out)
-        self.update_comm_counts()
-        if debug: print actions
+        #self.update_comm_counts()
+        if debug and self.GLOBAL_ITER % 10 == 0: print actions
     
     def run(self, t):
+        self.GLOBAL_ITER += 1
+        # print self.GLOBAL_ITER
         for iter_ in range(t):
     #        print self.img_dir
             if iter_ == t - 1: 
-                print self.env.expose_world_state()[0]
+                if self.GLOBAL_ITER % 10 == 0:
+                    print self.env.expose_world_state()[0]
                 self.step(debug=True)
             else:
                 self.step()

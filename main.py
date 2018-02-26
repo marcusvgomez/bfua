@@ -77,7 +77,7 @@ def plot_loss(loss):
     plt.plot(x_axis, y_axis, label = 'o')
     plt.xlabel('Epoch Number')
     plt.ylabel('Loss')
-    plt.savefig('Loss_Deterministic_100Timesteps.png')
+    plt.savefig('Loss_Deterministic_Minibatches.png')
 
 def main():
     parser = argparse.ArgumentParser(description="Train time babbbyyyyyyyy")
@@ -120,6 +120,7 @@ def main():
     save_loss = float("inf")
     # for epoch in range(runtime_config.n_epochs):
     # for epoch in range(int(1e6)):
+    total_loss = 0.
     for epoch in range(5000):
         # for param in controller.agent_trainable.parameters():
             # print param
@@ -129,14 +130,11 @@ def main():
         epoch_loss = []
         # controller.run(runtime_config.time_horizon)
         controller.run(10)
-        optimizer.zero_grad()
-        total_loss = controller.compute_loss()
-        total_loss.backward()#retain_variables = True) #This code is sketchy at best, not sure what it does 
-        optimizer.step()
-        loss.append(total_loss.data[0])
-        
+        curr_loss = controller.compute_loss()
+        total_loss += curr_loss
+        loss.append(curr_loss.data[0])
 
-        print "EPOCH IS: ", epoch, total_loss.data[0]
+        print "EPOCH IS: ", epoch, curr_loss.data[0]
         # draw(controller.env.world_state_agents, 'vis' + str(epoch) + '.png')
 
 
@@ -146,7 +144,7 @@ def main():
 
         #only runs if we are using optimizer decay
         # if total_loss.data[0] < max_loss and args.optimizer_decay:
-        if total_loss.data[0] > min_loss:
+        if curr_loss.data[0] > min_loss:
             not_improved += 1
             if not_improved > 250:
                 max_loss = total_loss
@@ -156,7 +154,13 @@ def main():
             min_loss = min(min_loss, total_loss.data[0])
             not_improved = 0
 
-        del total_loss
+        if epoch % 5 == 0:
+            optimizer.zero_grad()
+            total_loss.backward()#retain_variables = True) #This code is sketchy at best, not sure what it does 
+            optimizer.step()
+            del total_loss
+            total_loss = 0.
+
 
         #this was done for memory checks
         # if epoch %10 == 0:
