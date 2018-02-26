@@ -46,7 +46,6 @@ class Controller():
 
         self.dirichlet_alpha = runtime_config.dirichlet_alpha
         self.deterministic_goals = runtime_config.deterministic_goals
-        #self.deterministic_goals = False
 
         self.runtime_config = runtime_config
         
@@ -75,14 +74,14 @@ class Controller():
         self.X = Variable(torch.randn(STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
         
         self.C = Variable(torch.zeros(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
-        self.G_reward = 0.0 
+        self.G_loss = 0.0 
         # create memory bank Tensors??
         self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
         
         # create goals
         self.G = self.specify_goals()
         
-        self.physical_rewards = []
+        self.physical_losses = []
         
         # keeps track of the utterances 
 
@@ -103,17 +102,17 @@ class Controller():
         #     pass
     
     def reset(self):
-        del self.physical_rewards[:]
+        del self.physical_losses[:]
         self.env.clear()
         del self.G
-        self.G_reward = 0.0
+        self.G_loss = 0.0
 
         self.env = env(num_agents=self.N, num_landmarks=self.M, is_cuda=self.runtime_config.use_cuda)
         self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
         self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype), requires_grad = True)
         self.G = self.specify_goals()
         
-        self.physical_rewards = []
+        self.physical_losses = []
         self.comm_counts = torch.zeros(self.K).type(dtype)
         self.C = Variable(torch.zeros(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         if self.runtime_config.use_cuda:
@@ -125,7 +124,7 @@ class Controller():
 
 
     ##predictions are N x goal x N
-    def update_prediction_reward(self, predictions):
+    def update_prediction_loss(self, predictions):
         goals = self.G ## goal x N
         ret = 0.0
         for i in range(self.N):
@@ -133,30 +132,31 @@ class Controller():
                 if i == j: continue
                 i_prediction_j = predictions[i,:,j]
                 j_true = goals[:,j]
-                ret += (torch.norm(i_prediction_j - j_true)**2)
-        self.G_reward =  -1.0 * ret
+                ret += torch.norm(i_prediction_j - j_true)
+        self.G_loss =  -1.0 * ret
     
-    def compute_prediction_reward(self): return self.G_reward
+    def compute_prediction_loss(self): return self.G_loss
 
-    def compute_comm_reward(self):
+    def compute_comm_loss(self):
         # for penalizing large vocabulary sizes
         # probs should all be greater than 
         probs = self.comm_counts / (self.dirichlet_alpha + torch.sum(self.comm_counts) - 1.)
         r_c = torch.sum(self.comm_counts * torch.log(probs))
         # print "comm reward is: ", r_c
-        return r_c
+        return -r_c
     
-    def compute_physical_reward(self):
-        return sum(self.physical_rewards)
+    def compute_physical_loss(self):
+        return sum(self.physical_losses)
         
     def compute_loss(self):
         # TODO: fill in these rewards. Physical will come from env.
-        physical_reward = self.compute_physical_reward()
+        physical_loss = self.compute_physical_loss()
         # print "physical loss is: ", physical_loss.data[0]
-        prediction_reward = self.compute_prediction_reward()
-        comm_reward = self.compute_comm_reward()
-        self.loss = -1.0 * (physical_reward + prediction_reward + comm_reward)
-        self.loss = -1.0 * physical_reward
+        #prediction_loss = self.compute_prediction_loss()
+        #comm_loss = self.compute_comm_loss()
+        prediction_loss = 0.
+        comm_loss = 0.
+        self.loss = -(physical_loss + prediction_loss + comm_loss)
         return self.loss
 
     def specify_goals(self):
@@ -196,7 +196,7 @@ class Controller():
         comms = torch.sum(self.C, dim=1)
         self.comm_counts += comms.data
     
-    def update_phys_reward(self, actions):
+    def update_phys_loss(self, actions):
         world_state_agents, world_state_landmarks = self.env.expose_world_state()
         goals = self.G ## GOAL_DIM x N
         loss_t = 0.0
@@ -223,10 +223,10 @@ class Controller():
                     # print "FUCK", v_t_r, 
             u_i_t = actions[:,i]
             c_i_t = self.C[:,i]
-            loss_t += u_i_t.norm(2)**2
-            loss_t += c_i_t.norm(2)**2
+            #loss_t += u_i_t.norm(2)
+            #loss_t += c_i_t.norm(2)
         loss_t *= -1.0
-        self.physical_rewards.append(loss_t)
+        self.physical_losses.append(loss_t)
 
     def step(self, is_training = True, debug=False):
         # get the policy action/comms from passing it through the agent network
@@ -239,7 +239,7 @@ class Controller():
 
 
         actions, cTemp, MemTemp, memTemp, goal_out = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
-        self.update_phys_reward(actions)
+        self.update_phys_loss(actions)
 
         #not sure where 
         # actions = Variable(actions.data, requires_grad = False)
@@ -253,8 +253,8 @@ class Controller():
 
 
         # self.GLOBAL_ITER += 1
-        self.update_prediction_reward(goal_out)
-        self.update_comm_counts()
+        self.update_prediction_loss(goal_out)
+        #self.update_comm_counts()
         if debug and self.GLOBAL_ITER % 10 == 0: print actions
     
     def run(self, t):
