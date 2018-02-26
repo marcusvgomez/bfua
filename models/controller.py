@@ -46,7 +46,7 @@ class Controller():
 
         self.dirichlet_alpha = runtime_config.dirichlet_alpha
         #self.deterministic_goals = runtime_config.deterministic_goals
-        self.deterministic_goals = False
+        self.deterministic_goals = True
 
         self.runtime_config = runtime_config
         
@@ -173,8 +173,12 @@ class Controller():
             # agent 2's goal is to send itself to (-5, -5)
             goals[:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
             # the rest just do nothing
-            for i in range(2, self.N):
-                goals[2, i] = 1
+            # for i in range(2, self.N):
+                # print "GOAL SETTING"
+                # assert False
+                # goals[2, i] = 1
+            # print goals
+            # assert False
         else:
             for i in range(self.N):
                 action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
