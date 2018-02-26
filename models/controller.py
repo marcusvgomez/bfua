@@ -45,8 +45,7 @@ class Controller():
 
 
         self.dirichlet_alpha = runtime_config.dirichlet_alpha
-        #self.deterministic_goals = runtime_config.deterministic_goals
-        self.deterministic_goals = True
+        self.deterministic_goals = runtime_config.deterministic_goals
 
         self.runtime_config = runtime_config
         
