@@ -156,6 +156,7 @@ class Controller():
         prediction_reward = self.compute_prediction_reward()
         comm_reward = self.compute_comm_reward()
         self.loss = -1.0 * (physical_reward + prediction_reward + comm_reward)
+        self.loss = -1.0 * physical_reward
         return self.loss
 
     def specify_goals(self):
@@ -208,7 +209,7 @@ class Controller():
             if g_a_i.data[0] == 1:
                 p_t_r = world_state_agents[:,g_a_r][0:2]
                 try:
-                    loss_t += (p_t_r - r_bar).norm(2)**2
+                    loss_t += ((p_t_r - r_bar).norm(2))**2
                 except RuntimeError as e:
                     pass
                     # print "FUCK", p_t_r, r_bar
@@ -216,7 +217,7 @@ class Controller():
             elif g_a_i.data[1] == 1: 
                 v_t_r = world_state_agents[:,g_a_r][4:6]
                 try:
-                    loss_t += (v_t_r - r_bar).norm(2)**2
+                    loss_t += ((v_t_r - r_bar).norm(2))**2
                 except RuntimeError as e:
                     pass
                     # print "FUCK", v_t_r, 
@@ -251,17 +252,19 @@ class Controller():
         self.X = Variable(tempX.data, requires_grad = True)
 
 
-        self.GLOBAL_ITER += 1
+        # self.GLOBAL_ITER += 1
         self.update_prediction_reward(goal_out)
         self.update_comm_counts()
-        if debug: print actions
+        if debug and self.GLOBAL_ITER % 10 == 0: print actions
     
     def run(self, t):
+        self.GLOBAL_ITER += 1
+        # print self.GLOBAL_ITER
         for iter_ in range(t):
     #        print self.img_dir
             if iter_ == t - 1: 
-                #self.step()
-                print self.env.expose_world_state()[0]
+                if self.GLOBAL_ITER % 10 == 0:
+                    print self.env.expose_world_state()[0]
                 self.step(debug=True)
             else:
                 self.step()
