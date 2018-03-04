@@ -100,7 +100,7 @@ def main():
     parser.add_argument('--optimizer-decay-epoch', type=float, help='Number of epochs of not improving that we decay the optimizer')
     parser.add_argument('--optimizer-decay-rate', type=float, help='Rate at which we decay the optimizer')
     parser.add_argument('--dirichlet-alpha', type=float, help='Optional param that specifies the Dirichlet Process hyperparameter used in communication reward')
-    parser.add_argument('--deterministic-goals', type=bool, help='Optional param that specifies whether to generate a pre-specified dummy set of deterministic goals')
+    parser.add_argument('--deterministic-goals', action='store_true', help='Optional param that specifies whether to generate a pre-specified dummy set of deterministic goals')
 
     arg_dict = vars(parser.parse_args())
     args = parser.parse_args()
@@ -121,23 +121,26 @@ def main():
     save_loss = float("inf")
     # for epoch in range(runtime_config.n_epochs):
     # for epoch in range(int(1e6)):
+    episode_per_epoch = 1024
     total_loss = 0.
     for epoch in range(5000):
         # for param in controller.agent_trainable.parameters():
             # print param
 
+        episode_loss = []
+        for _ in range(episode_per_epoch):
+            controller.reset() #resetting the controller
+            # controller.run(runtime_config.time_horizon)
+            controller.run(10)
+            curr_loss = controller.compute_loss()
+            total_loss += curr_loss
+            episode_loss.append(curr_loss.data[0])
 
-        controller.reset() #resetting the controller
-        epoch_loss = []
-        # controller.run(runtime_config.time_horizon)
-        controller.run(10)
-        curr_loss = controller.compute_loss()
-        total_loss += curr_loss
-        loss.append(curr_loss.data[0])
-
-        print "EPOCH IS: ", epoch, curr_loss.data[0]
+        epoch_loss = np.array(episode_loss).mean()
+        print "EPOCH IS: ", epoch, epoch_loss
         # draw(controller.env.world_state_agents, 'vis' + str(epoch) + '.png')
 
+        loss.append(epoch_loss)
 
         if epoch % 50 == 0:
              save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
@@ -155,12 +158,22 @@ def main():
             min_loss = min(min_loss, total_loss.data[0])
             not_improved = 0
 
-        if epoch % 5 == 0:
-            optimizer.zero_grad()
-            total_loss.backward()#retain_variables = True) #This code is sketchy at best, not sure what it does 
-            optimizer.step()
-            del total_loss
-            total_loss = 0.
+        optimizer.zero_grad()
+        total_loss /= episode_per_epoch
+        total_loss.backward()
+        optimizer.step()
+        del total_loss
+        total_loss = 0.
+
+
+
+
+        # if epoch % 5 == 0:
+        #     optimizer.zero_grad()
+        #     total_loss.backward()#retain_variables = True) #This code is sketchy at best, not sure what it does 
+        #     optimizer.step()
+        #     del total_loss
+        #     total_loss = 0.
 
 
         #this was done for memory checks

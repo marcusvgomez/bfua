@@ -93,6 +93,8 @@ class Controller():
             print "running cuda"
             self.agent_trainable.cuda()
             self.comm_counts = self.comm_counts.cuda()
+
+        print "running deterministic goals: ", self.deterministic_goals
         
         # make directory for storing visualizations
         self.img_dir = os.path.dirname(__file__) + '/../imgs/' + "phys_comm" + time.strftime('%m%d-%I%M') + '/'
@@ -268,9 +270,9 @@ class Controller():
         for iter_ in range(t):
     #        print self.img_dir
             if iter_ == t - 1: 
-                if self.GLOBAL_ITER % 100 == 99:
-                    print self.env.expose_world_state()[0]
-                self.step(debug=True)
+                # if self.GLOBAL_ITER % 100 == 99:
+                    # print self.env.expose_world_state()[0]
+                self.step(debug=False)
             else:
                 self.step()
 
