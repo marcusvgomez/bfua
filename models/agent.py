@@ -163,7 +163,7 @@ class agent(nn.Module):
         epsilon_noise = make_epsilon_noise()
         if self.use_cuda:
             epsilon_noise = epsilon_noise.cuda()
-        action_output = psi_u + epsilon_noise
+        action_output = psi_u# + epsilon_noise
     
 
 #        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, -1)#self.num_agents)
@@ -182,8 +182,11 @@ class agent(nn.Module):
         if self.use_cuda:
             M_eps = M_eps.cuda()
             m_eps = m_eps.cuda()
-        M = self.tanh(M.transpose(1,2) + mem_mm_delta + M_eps)
-        m = self.tanh(m + mem_delta + m_eps).transpose(0,1)
+        # M = self.tanh(M.transpose(1,2) + mem_mm_delta + M_eps)
+        # m = self.tanh(m + mem_delta + m_eps).transpose(0,1)
+
+        M = self.tanh(M.transpose(1,2) + mem_mm_delta)
+        m = self.tanh(m + mem_delta).transpose(0,1)
 
         #transposing because we have to i think
         #I really need to check to make sure math stuff works

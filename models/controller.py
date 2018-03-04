@@ -95,11 +95,11 @@ class Controller():
             self.comm_counts = self.comm_counts.cuda()
         
         # make directory for storing visualizations
-        # self.img_dir = os.path.dirname(__file__) + '/../imgs/' + time.strftime('%m%d-%I%M') + '/'
-        # try:
-        #     os.mkdir(self.img_dir[:-1])
-        # except OSError as err:
-        #     pass
+        self.img_dir = os.path.dirname(__file__) + '/../imgs/' + "phys_comm" + time.strftime('%m%d-%I%M') + '/'
+        try:
+            os.mkdir(self.img_dir[:-1])
+        except OSError as err:
+            pass
     
     def reset(self):
         del self.physical_losses[:]
@@ -152,10 +152,10 @@ class Controller():
         # TODO: fill in these rewards. Physical will come from env.
         physical_loss = self.compute_physical_loss()
         # print "physical loss is: ", physical_loss.data[0]
-        #prediction_loss = self.compute_prediction_loss()
-        #comm_loss = self.compute_comm_loss()
-        prediction_loss = 0.
-        comm_loss = 0.
+        prediction_loss = self.compute_prediction_loss()
+        comm_loss = self.compute_comm_loss()
+        # prediction_loss = 0.
+        # comm_loss = 0.
         self.loss = -(physical_loss + prediction_loss + comm_loss)
         return self.loss
 
@@ -168,11 +168,15 @@ class Controller():
         goals = torch.FloatTensor(GOAL_DIM, self.N).zero_()
         if self.deterministic_goals:
             # ACTUALLY rn agent 0 is just doing to do nothing. simplest case for now. agent 0's old goal is to get agent 1 to go to (5, 5)
-            goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 1])
+            # goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 1])
             # # ACTUALLY rn agent 1 goal is also to do nothing. agent 1's old goal is to get agent 0 to look UP at (0, 1)
-            goals[:, 1] = torch.FloatTensor([0, 0, 1, 0, 1, 0])
+            # goals[:, 1] = torch.FloatTensor([0, 0, 1, 0, 1, 0])
+            #agent 0's goal is to get agent 1 to go to (5,5)
+            goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 1])
+            #agent 1's goal is to get agent 0 to look UP at (0,1)
+            goals[:, 1] = torch.FloatTensor([0, 1, 0, 5, -5, 0])
             # agent 2's goal is to send itself to (-5, -5)
-            goals[:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
+            goals[:, 2] = torch.FloatTensor([0, 0, 1, -5, -5, 2])
             # the rest just do nothing
             for i in range(3, self.N):
                 goals[2, i] = 1
@@ -200,6 +204,7 @@ class Controller():
         world_state_agents, world_state_landmarks = self.env.expose_world_state()
         goals = self.G ## GOAL_DIM x N
         loss_t = 0.0
+        # loss_t = Variable(torch.FloatTensor([0.]))
         for i in range(self.N):
             # if i != 2: continue
             g_a_i = goals[:,i]
@@ -223,8 +228,8 @@ class Controller():
                     # print "FUCK", v_t_r, 
             u_i_t = actions[:,i]
             c_i_t = self.C[:,i]
-            #loss_t += u_i_t.norm(2)
-            #loss_t += c_i_t.norm(2)
+            # loss_t += u_i_t.norm(2) * 0.005
+            # loss_t += c_i_t.norm(2) * 0.005
         loss_t *= -1.0
         self.physical_losses.append(loss_t)
 
@@ -252,18 +257,18 @@ class Controller():
         self.X = Variable(tempX.data, requires_grad = True)
 
 
-        # self.GLOBAL_ITER += 1
+        self.GLOBAL_ITER += 1
         self.update_prediction_loss(goal_out)
-        #self.update_comm_counts()
-        if debug and self.GLOBAL_ITER % 10 == 0: print actions
+        self.update_comm_counts()
+        if debug and self.GLOBAL_ITER % 100 == 0: print actions
     
     def run(self, t):
-        self.GLOBAL_ITER += 1
+        # self.GLOBAL_ITER += 1
         # print self.GLOBAL_ITER
         for iter_ in range(t):
     #        print self.img_dir
             if iter_ == t - 1: 
-                if self.GLOBAL_ITER % 10 == 0:
+                if self.GLOBAL_ITER % 100 == 99:
                     print self.env.expose_world_state()[0]
                 self.step(debug=True)
             else:
@@ -272,8 +277,9 @@ class Controller():
             
             # visualize every 10 time steps
             if self.GLOBAL_ITER % 10 == 0:
-                pass
-                # draw(self.env.world_state_agents, name=self.img_dir +'vis'+str(self.GLOBAL_ITER)+'.png')
+                draw(self.env.world_state_agents, name=self.img_dir + 'vis'+str(self.GLOBAL_ITER)+ '_' + '.png')
+        # if self.GLOBAL_ITER == 10000:
+            # assert False
 
         
 

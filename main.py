@@ -43,7 +43,8 @@ def getTime():
     return datetime.datetime.now().strftime("%d-%H-%M-%s")
 
 save_path = '/cvgl2/u/bcui/cs234/results/'
-model_name = 'communication_reinforce'
+# model_name = 'communication_vision_non_adversarial'
+model_name = 'vis_no_comm_no_noise'
 currTime = getTime()
 print currTime
 save_model_name = save_path + model_name + " date " + currTime + ".pt"
@@ -77,7 +78,7 @@ def plot_loss(loss):
     plt.plot(x_axis, y_axis, label = 'o')
     plt.xlabel('Epoch Number')
     plt.ylabel('Loss')
-    plt.savefig('Loss_Deterministic_Minibatches.png')
+    plt.savefig('Loss_' + str(model_name) + '.png')
 
 def main():
     parser = argparse.ArgumentParser(description="Train time babbbyyyyyyyy")
@@ -138,9 +139,9 @@ def main():
         # draw(controller.env.world_state_agents, 'vis' + str(epoch) + '.png')
 
 
-        # if epoch % 50 == 0:
-             # save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
-             # save_loss = min(save_loss, total_loss.data[0])
+        if epoch % 50 == 0:
+             save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
+             save_loss = min(save_loss, total_loss.data[0])
 
         #only runs if we are using optimizer decay
         # if total_loss.data[0] < max_loss and args.optimizer_decay:
