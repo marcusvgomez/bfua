@@ -160,33 +160,45 @@ class agent(nn.Module):
                                                 output[:, self.action_dim + self.vocab_size: self.action_dim + self.vocab_size + self.memory_size * self.num_agents],\
                                                 output[:, self.action_dim + self.vocab_size + self.memory_size * self.num_agents: ]
 
-        epsilon_noise = make_epsilon_noise()
-        if self.use_cuda:
-            epsilon_noise = epsilon_noise.cuda()
-        action_output = psi_u# + epsilon_noise
+        if is_training:
+            epsilon_noise = make_epsilon_noise()
+            if self.use_cuda:
+                epsilon_noise = epsilon_noise.cuda()
+            action_output = psi_u + epsilon_noise
+        else:
+            action_output = psi_u
     
 
 #        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, -1)#self.num_agents)
         mem_mm_delta = mem_mm_delta.contiguous().view(-1, self.memory_size, self.num_agents)
+        temp_comm_output = self.gumbel_softmax(psi_c)
         if is_training:
             communication_output = self.gumbel_softmax(psi_c)
         else:
             psi_c_log = self.softmax(psi_c)
             cat = Categorical(probs=psi_c_log)
-            communication_output = cat.sample()
+            comm_one_hot = cat.sample()
+            communication_output = torch.zeros(self.num_agents, self.vocab_size)
+            for i, val in enumerate(comm_one_hot.data):
+                communication_output[i][val] = 1.
+            communication_output = Variable(communication_output).cuda()
 
 
         #memory updates
-        M_eps = make_epsilon_noise()
-        m_eps = make_epsilon_noise()
-        if self.use_cuda:
-            M_eps = M_eps.cuda()
-            m_eps = m_eps.cuda()
-        # M = self.tanh(M.transpose(1,2) + mem_mm_delta + M_eps)
-        # m = self.tanh(m + mem_delta + m_eps).transpose(0,1)
+        if is_training:
+            M_eps = make_epsilon_noise()
+            m_eps = make_epsilon_noise()
+            if self.use_cuda:
+                M_eps = M_eps.cuda()
+                m_eps = m_eps.cuda()
+            mem_mm_delta += M_eps
+            mem_delta += m_eps
 
         M = self.tanh(M.transpose(1,2) + mem_mm_delta)
         m = self.tanh(m + mem_delta).transpose(0,1)
+
+        # M = self.tanh(M.transpose(1,2) + mem_mm_delta)
+        # m = self.tanh(m + mem_delta).transpose(0,1)
 
         #transposing because we have to i think
         #I really need to check to make sure math stuff works

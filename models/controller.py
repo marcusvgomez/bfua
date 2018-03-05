@@ -97,11 +97,11 @@ class Controller():
         print "running deterministic goals: ", self.deterministic_goals
         
         # make directory for storing visualizations
-        self.img_dir = os.path.dirname(__file__) + '/../imgs/' + "phys_comm" + time.strftime('%m%d-%I%M') + '/'
-        try:
-            os.mkdir(self.img_dir[:-1])
-        except OSError as err:
-            pass
+        # self.img_dir = os.path.dirname(__file__) + '/../imgs/' + "phys_comm" + time.strftime('%m%d-%I%M') + '/'
+        # try:
+        #     os.mkdir(self.img_dir[:-1])
+        # except OSError as err:
+        #     pass
     
     def reset(self):
         del self.physical_losses[:]
@@ -195,12 +195,16 @@ class Controller():
 
         return Variable(goals.type(dtype), requires_grad = True)
     
-    def update_comm_counts(self):
+    def update_comm_counts(self, is_training = False):
         # update counts for each communication utterance.
         # interpolated as a float for differentiability, used in comm_reward 
 
         comms = torch.sum(self.C, dim=1)
-        self.comm_counts += comms.data
+        # print comms, self.comm_counts
+        if is_training:
+            self.comm_counts += comms.data
+        else:
+            self.comm_counts += comms
     
     def update_phys_loss(self, actions):
         world_state_agents, world_state_landmarks = self.env.expose_world_state()
@@ -230,8 +234,8 @@ class Controller():
                     # print "FUCK", v_t_r, 
             u_i_t = actions[:,i]
             c_i_t = self.C[:,i]
-            # loss_t += u_i_t.norm(2) * 0.005
-            # loss_t += c_i_t.norm(2) * 0.005
+            loss_t += u_i_t.norm(2) * 0.005
+            loss_t += c_i_t.norm(2) * 0.005
         loss_t *= -1.0
         self.physical_losses.append(loss_t)
 
@@ -252,7 +256,10 @@ class Controller():
         # actions = Variable(actions.data, requires_grad = False)
         self.Mem = Variable(MemTemp.data, requires_grad = True)
         self.mem = Variable(memTemp.data, requires_grad = True)
-        self.C = Variable(cTemp.data, requires_grad = True)
+        if is_training:
+            self.C = Variable(cTemp.data, requires_grad = True)
+        else:
+            self.C = Variable(cTemp.data, requires_grad = True)
         #self.G = Variable(goal_out.data, requires_grad = True)
 
         tempX = self.env.forward(actions)
@@ -261,25 +268,27 @@ class Controller():
 
         self.GLOBAL_ITER += 1
         self.update_prediction_loss(goal_out)
-        self.update_comm_counts()
-        if debug and self.GLOBAL_ITER % 100 == 0: print actions
+        self.update_comm_counts(is_training= is_training)
+        # if debug and self.GLOBAL_ITER % 100 == 0: print actions
+        if debug: print actions
     
-    def run(self, t):
+    def run(self, t, is_training):
         # self.GLOBAL_ITER += 1
         # print self.GLOBAL_ITER
         for iter_ in range(t):
     #        print self.img_dir
+            print self.env.expose_world_state()[0]
             if iter_ == t - 1: 
                 # if self.GLOBAL_ITER % 100 == 99:
                     # print self.env.expose_world_state()[0]
-                self.step(debug=False)
+                self.step(debug=True, is_training = is_training)
             else:
-                self.step()
+                self.step(is_training = is_training)
 
             
             # visualize every 10 time steps
-            if self.GLOBAL_ITER % 10 == 0:
-                draw(self.env.world_state_agents, name=self.img_dir + 'vis'+str(self.GLOBAL_ITER)+ '_' + '.png')
+            # if self.GLOBAL_ITER % 10 == 0 and self.GLOBAL_ITER%10240 < 100:
+            #     draw(self.env.world_state_agents, name=self.img_dir + 'vis'+str(self.GLOBAL_ITER)+ '_' + '.png')
         # if self.GLOBAL_ITER == 10000:
             # assert False
 
