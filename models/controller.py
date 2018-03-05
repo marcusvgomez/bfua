@@ -73,7 +73,8 @@ class Controller():
         # can X get its initial value from env?
 
         #self.X = self.env.world_state_agents
-        self.X = Variable(torch.randn(STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
+        # self.X = Variable(torch.zeros(STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
+        self.X = Variable(self.env.expose_world_state_extended(), requires_grad=True)
         
         self.C = Variable(torch.zeros(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         self.G_loss = 0.0 
@@ -112,6 +113,7 @@ class Controller():
         self.G_loss = 0.0
 
         self.env = env(num_agents=self.N, num_landmarks=self.M, is_cuda=self.runtime_config.use_cuda)
+        self.X = self.env.expose_world_state_extended()
         self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
         self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype), requires_grad = True)
         self.G = self.specify_goals()
