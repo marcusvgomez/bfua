@@ -72,7 +72,8 @@ class Controller():
         # maybe X can just be a tensor and not a variable since it's not being trained
         # can X get its initial value from env?
 
-        self.X = self.env.world_state_agents
+        #self.X = self.env.world_state_agents
+        self.X = Variable(torch.randn(STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
         
         self.C = Variable(torch.zeros(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         self.G_loss = 0.0 
