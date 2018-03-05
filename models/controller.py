@@ -74,7 +74,10 @@ class Controller():
         # own reference frame. TODO: probably not N+M for observations of all other objects
         # maybe X can just be a tensor and not a variable since it's not being trained
         # can X get its initial value from env?
-        self.X = Variable(torch.zeros(self.minibatch_size, STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
+        #self.X = Variable(torch.zeros(self.minibatch_size, STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
+
+        #self.X = self.env.world_state_agents
+        self.X = Variable(self.env.expose_world_state_extended(), requires_grad=True)
         
         self.C = Variable(torch.zeros(self.minibatch_size, self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         self.G_loss = 0.0 
@@ -109,11 +112,15 @@ class Controller():
     
     def reset(self):
         del self.physical_losses[:]
-        self.env.clear()
+        # self.env.clear()
         del self.G
         self.G_loss = 0.0
 
-        self.env = env(num_agents=self.N, num_landmarks=self.M, is_cuda=self.runtime_config.use_cuda)
+        #self.env = env(num_agents=self.N, num_landmarks=self.M, is_cuda=self.runtime_config.use_cuda)
+        #self.Mem = Variable(torch.zeros(self.minibatch_size, self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
+        #self.mem = Variable(torch.zeros(self.minibatch_size, self.memory_size, self.N).type(dtype), requires_grad = True)
+        
+        self.X = Variable(self.env.expose_world_state_extended(), requires_grad = True)
         self.Mem = Variable(torch.zeros(self.minibatch_size, self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
         self.mem = Variable(torch.zeros(self.minibatch_size, self.memory_size, self.N).type(dtype), requires_grad = True)
         self.G = self.specify_goals()
@@ -172,29 +179,24 @@ class Controller():
         # Goals are formatted as 6-dim vectors: [one hot action selection, location coords, agent] (3 + 2 + 1)
         # Otherwise, randomly generate one
         
-        goals = torch.FloatTensor(self.minibatch_size, GOAL_DIM, self.N).zero_()
+        goals = torch.FloatTensor(self.minibatch_size,GOAL_DIM, self.N).zero_()
         if self.deterministic_goals:
-            # print "MAKING DETERMINISTIC GOALS"
-            # ACTUALLY rn agent 0 is just doing to do nothing. simplest case for now. agent 0's old goal is to get agent 1 to go to (5, 5)
-            # goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 1])
-            # # ACTUALLY rn agent 1 goal is also to do nothing. agent 1's old goal is to get agent 0 to look UP at (0, 1)
-            # goals[:, 1] = torch.FloatTensor([0, 0, 1, 0, 1, 0])
             #agent 0's goal is to get agent 1 to go to (5,5)
-            goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 0])
+            goals[:,:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 0])
             #agent 1's goal is to get agent 0 to look UP at (0,1)
-            goals[:, 1] = torch.FloatTensor([0, 1, 0, 5, -5, 1])
+            goals[:,:, 1] = torch.FloatTensor([0, 1, 0, 5, -5, 1])
             # agent 2's goal is to send itself to (-5, -5)
-            goals[:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
+            goals[:,:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
             # the rest just do nothing
             for i in range(3, self.N):
-                goals[2, i] = 1
+                goals[:,2, i] = 1
         else:
             for j in range(self.minibatch_size):
                 for i in range(self.N):
                     action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
                     x, y = np.random.uniform(-20.0, 20.0, size=(2,)) # TODO: have clearer bounds in env so these coordinates mean something
                     target_agent = np.random.randint(0, self.N)
-                
+            
                     goals[j,action_type,i] = 1
                     goals[j,3,i] = x
                     goals[j,4,i] = y

@@ -10,7 +10,7 @@ import torch
 from torch.autograd import Function, Variable
 
 R_DIM = 2
-STATE_DIM = 6# 2(for position) + 2(for velocity) + 2(for gaze) + 1(for color)
+STATE_DIM = 6# 2(for position) + 2(for velocity) + 2(for gaze) + NO(1(for color))
 ACTION_DIM = 4 # 2 (for velocity) + 2(for gaze)
 
 class env:
@@ -64,7 +64,18 @@ class env:
 
     ##this is literally horrible design
     def expose_world_state(self): return self.world_state_agents, self.world_state_landmarks
-
+    
+    def expose_world_state_extended(self):
+        # returns a version of the agents world state that is duplicated to be (STATE_DIM * NUM_AGENTS) by NUM_AGENTS to serve as the observations of all of the agents
+        total_state = torch.FloatTensor(self.minibatch_size, STATE_DIM * self.num_agents, self.num_agents).zero_()
+        # bad but not sure if pytorch has convenient reshaping tools to do this
+        for c in range(self.num_agents):
+            agent_state = self.world_state_agents[:, c].data
+            for r in range(self.num_agents):
+                total_state[:, STATE_DIM*r:STATE_DIM*(r+1), c] = self.world_state_agents[:, :, r].data
+        return total_state
+        
+    
     ##actions should be a 6 X N tensor
     ##returns a 12(N+M) x N tensor
     def forward(self, actions):
