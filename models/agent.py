@@ -116,8 +116,6 @@ class agent(nn.Module):
         X = X.transpose(0, 1)
         g = g.transpose(0, 1)
         m = m.transpose(0, 1)
-        print X
-        assert False
 
         C = C.repeat(self.num_agents, 1, 1)
         X = X.repeat(self.num_agents, 1, 1)
@@ -146,15 +144,12 @@ class agent(nn.Module):
           goal_out = torch.cat(goal_results)
           goal_out = goal_out.transpose(1,2)
         
-        print X
-        assert False
         loc_output = self.input_FC(X)
         loc_pool = self.softmaxPool(loc_output, dim = 1).squeeze() #this is bad for now need to fix later
-        print comm_pool, m, loc_pool, g
-        assert False
 
         #concatenation of pooled communication, location, goal, and memory
         output_input = torch.cat([comm_pool, m, loc_pool, g], 1)
+        print output_input
 
         output = self.output_FC(output_input)
 
@@ -193,6 +188,8 @@ class agent(nn.Module):
             if self.use_cuda:
                 M_eps = M_eps.cuda()
                 m_eps = m_eps.cuda()
+            print mem_mm_delta
+            assert False
             M = self.tanh(M + mem_delta + M_eps).transpose(1, 2)
             m = self.tanh(m + mem_delta + M_eps).transpose(0, 1)
         
