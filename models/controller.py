@@ -168,7 +168,7 @@ class Controller():
         # Goals are formatted as 6-dim vectors: [one hot action selection, location coords, agent] (3 + 2 + 1)
         # Otherwise, randomly generate one
         
-        goals = torch.FloatTensor(self.minibatch_size, GOAL_DIM, self.N).zero_()
+        goals = torch.FloatTensor(GOAL_DIM, self.N).zero_()
         if self.deterministic_goals:
             # ACTUALLY rn agent 0 is just doing to do nothing. simplest case for now. agent 0's old goal is to get agent 1 to go to (5, 5)
             # goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 1])
@@ -184,16 +184,15 @@ class Controller():
             for i in range(3, self.N):
                 goals[:,2, i] = 1
         else:
-            for j in range(self.minibatch_size):
-                for i in range(self.N):
-                    action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
-                    x, y = np.random.uniform(-20.0, 20.0, size=(2,)) # TODO: have clearer bounds in env so these coordinates mean something
-                    target_agent = np.random.randint(0, self.N)
-                
-                    goals[j,action_type,i] = 1
-                    goals[j,3,i] = x
-                    goals[j,4,i] = y
-                    goals[j,5,i] = target_agent
+            for i in range(self.N):
+                action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
+                x, y = np.random.uniform(-20.0, 20.0, size=(2,)) # TODO: have clearer bounds in env so these coordinates mean something
+                target_agent = np.random.randint(0, self.N)
+            
+                goals[action_type,i] = 1
+                goals[3,i] = x
+                goals[4,i] = y
+                goals[5,i] = target_agent
 
         return Variable(goals.type(dtype), requires_grad = True)
     
