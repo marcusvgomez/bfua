@@ -124,14 +124,14 @@ def main():
     #this needs to be fixed
     optimizer = optim.Adam(controller.agent_trainable.parameters(), lr = 0.0005)
 
-    if 'load_model' in arg_dict:
+
+
+    if 'load_model' in arg_dict and arg_dict['load_model'] is not None:
         load_model(arg_dict['load_model'], controller, optimizer)
 
-    if 'test' in arg_dict:
+    if 'test' in arg_dict and arg_dict['test']:
         controller.run(10, is_training = False)
-
     else:
-        assert False
         loss = []
         not_improved = 0
         min_loss = float("inf")
@@ -148,7 +148,7 @@ def main():
             for _ in range(episode_per_epoch):
                 controller.reset() #resetting the controller
                 # controller.run(runtime_config.time_horizon)
-                controller.run(1)
+                controller.run(10, is_training = True)
                 curr_loss = controller.compute_loss()
                 total_loss += curr_loss
                 episode_loss.append(curr_loss.data[0])
