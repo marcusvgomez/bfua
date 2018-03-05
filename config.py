@@ -20,7 +20,7 @@ class RuntimeConfig:
         #input network parameters
         self.vocab_size = 20 if 'vocab-size' not in args else args['vocab-size']
         self.num_agents = 3 if 'num-agents' not in args else args['num-agents']
-        self.num_landmarks = 3 if 'num-landmarks' not in args else args['num-landmarks']
+        self.num_landmarks = 0 if 'num-landmarks' not in args else args['num-landmarks']
         # input size is just num_agents + num_landmarks
         self.input_size = 3 if 'input-size' not in args else args['input-size']
         self.hidden_comm_size = 128 if 'hidden-comm-size' not in args else args['hidden-input-size']
@@ -31,6 +31,8 @@ class RuntimeConfig:
 
         #preset network parameters these are somewhat hard coded into agent
         self.memory_size = 32 if 'memory_size' not in args else args['memory_size'] #this is used for both memory tensors
+        self.minibatch_size = 1024
+        self.num_gpus = 2
 
 
         #hyperparameters
@@ -39,4 +41,4 @@ class RuntimeConfig:
         self.optimizer_decay_rate = 5 if 'optimizer-decay-rate' not in args else args['optimizer-decay-rate']
         self.dropout = 0 if 'dropout' not in args else args['dropout']
         self.dirichlet_alpha = 0.01 if 'dirichlet-alpha' not in args else args['dirichlet-alpha']
-        self.deterministic_goals = True if 'deterministic-goals' not in args else args['deterministic-goals']
+        self.deterministic_goals = False if 'deterministic-goals' not in args else args['deterministic-goals']
