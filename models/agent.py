@@ -191,11 +191,12 @@ class agent(nn.Module):
             if self.use_cuda:
                 M_eps = M_eps.cuda()
                 m_eps = m_eps.cuda()
-            mem_mm_delta += M_eps
-            mem_delta += m_eps
-
-        M = self.tanh(M.transpose(1,2) + mem_mm_delta)
-        m = self.tanh(m + mem_delta).transpose(0,1)
+            M = self.tanh(M + mem_delta + M_eps).transpose(1, 2)
+            m = self.tanh(m + mem_delta + M_eps).transpose(0, 1)
+        
+        else:
+            M = self.tanh(M.transpose(1,2) + mem_mm_delta)
+            m = self.tanh(m + mem_delta).transpose(0,1)
 
         # M = self.tanh(M.transpose(1,2) + mem_mm_delta)
         # m = self.tanh(m + mem_delta).transpose(0,1)
