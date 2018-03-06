@@ -198,10 +198,12 @@ class Controller():
                 goals[:,2, i] = 1
         else:
             for j in range(self.minibatch_size):
+                agents_unused = range(self.N)
                 for i in range(self.N):
                     action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
                     x, y = np.random.uniform(-20.0, 20.0, size=(2,)) # TODO: have clearer bounds in env so these coordinates mean something
-                    target_agent = np.random.randint(0, self.N)
+                    target_agent = random.sample(agents_unused,1)
+                    agents_unused.remove(target_agent)
             
                     goals[j,action_type,i] = 1
                     goals[j,3,i] = x
