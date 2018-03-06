@@ -112,7 +112,7 @@ class Controller():
     
     def reset(self):
         del self.physical_losses[:]
-        # self.env.clear()
+        self.env.clear()
         del self.G
         self.G_loss = 0.0
 
