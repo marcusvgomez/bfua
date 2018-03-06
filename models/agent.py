@@ -44,7 +44,7 @@ class agent(nn.Module):
                  hidden_input_size, input_output_size,
                  hidden_output_size, action_dim = ACTION_DIM,
                  memory_size = 32, goal_size = 6, is_cuda = False, dropout_prob = 0.0,
-                 is_goal_predicting = False):
+                 is_goal_predicting = False, minibatch_size = 1024, num_gpus = 2):
         super(agent, self).__init__()
         self.num_agents = num_agents
         self.num_landmarks = num_landmarks
@@ -56,6 +56,8 @@ class agent(nn.Module):
 	self.use_cuda = is_cuda
         self.is_goal_predicting = is_goal_predicting
         self.comm_output_size = comm_output_size
+        self.minibatch_size = minibatch_size
+        self.num_gpus = num_gpus
         if self.is_goal_predicting: 
           self.goal_dim = GOAL_DIM 
         else:
@@ -111,17 +113,28 @@ class agent(nn.Module):
         
         X, C, g, M, m, is_training = inputs
         #reshaping everything for sanity
-        M = M.transpose(1, 2)
+        M = M.transpose(2, 3)
+        C = C.transpose(1, 2)
+        X = X.transpose(1, 2)
+        g = g.transpose(1, 2)
+        m = m.transpose(1, 2)
+
+        C = C.repeat(self.num_agents, 1, 1, 1)
+        X = X.unsqueeze(1)  
+        X = X.repeat(1, self.num_agents, 1, 1)
+
         C = C.transpose(0, 1)
+<<<<<<< HEAD
         X = X.transpose(0, 1)
         g = g.transpose(0, 1)
         m = m.transpose(0, 1)
+=======
+>>>>>>> 299bb407f9e7e527c5ea08597575c0ed7328ef46
 
-        C = C.repeat(self.num_agents, 1, 1)
-        X = X.repeat(self.num_agents, 1, 1)
 
+        # print M, C, X, g, m
 
-        communication_input = torch.cat([C, M], 2) #concatenate along the first direction
+        communication_input = torch.cat([C, M], 3) #concatenate along the first direction
 
         #(comm_size + goal_size) x ___ x N
         #(comm_size) x __ x N, (goal) x __ x N
@@ -135,27 +148,43 @@ class agent(nn.Module):
           comm_results = []
           goal_results = []
           for i in range(self.num_agents):
-            comm_i = comm_out[i,:,0:self.comm_output_size]
-            goal_i = comm_out[i,:,self.comm_output_size:]
+            comm_i = comm_out[:,i,:,0:self.comm_output_size]
+            goal_i = comm_out[:,i,:,self.comm_output_size:]
             comm_results.append(torch.unsqueeze(comm_i, 0))
             goal_results.append(torch.unsqueeze(goal_i, 0))
           comm_intermediate = torch.cat(comm_results, 0)
           comm_pool = self.softmaxPool(comm_intermediate)
-          goal_out = torch.cat(goal_results)
-          goal_out = goal_out.transpose(1,2)
+          goal_out = torch.cat(goal_results, 0)
+          goal_out = goal_out.transpose(2,3)
+          goal_out = goal_out.transpose(0,1)
+
         
+<<<<<<< HEAD
         loc_output = self.input_FC(X)
         loc_pool = self.softmaxPool(loc_output, dim = 1).squeeze() #this is bad for now need to fix later
 
         #concatenation of pooled communication, location, goal, and memory
         output_input = torch.cat([comm_pool, m, loc_pool, g], 1)
         print output_input
+=======
+
+        # print X
+        loc_output = self.input_FC(X)
+        # print X, loc_output
+        loc_pool = self.softmaxPool(loc_output, dim = 2).squeeze() #this is bad for now need to fix later
+        # print loc_pool
+        # assert False
+
+
+        #concatenation of pooled communication, location, goal, and memory
+        output_input = torch.cat([comm_pool, m, loc_pool, g], 2)
+>>>>>>> 299bb407f9e7e527c5ea08597575c0ed7328ef46
 
         output = self.output_FC(output_input)
 
-        psi_u, psi_c, mem_mm_delta, mem_delta = output[:, :self.action_dim], output[:, self.action_dim:self.action_dim + self.vocab_size],\
-                                                output[:, self.action_dim + self.vocab_size: self.action_dim + self.vocab_size + self.memory_size * self.num_agents],\
-                                                output[:, self.action_dim + self.vocab_size + self.memory_size * self.num_agents: ]
+        psi_u, psi_c, mem_mm_delta, mem_delta = output[:, :, :self.action_dim], output[:, :, self.action_dim:self.action_dim + self.vocab_size],\
+                                                output[:, :, self.action_dim + self.vocab_size: self.action_dim + self.vocab_size + self.memory_size * self.num_agents],\
+                                                output[:, :, self.action_dim + self.vocab_size + self.memory_size * self.num_agents: ]
 
         if is_training:
             epsilon_noise = make_epsilon_noise()
@@ -164,10 +193,23 @@ class agent(nn.Module):
             action_output = psi_u + epsilon_noise
         else:
             action_output = psi_u
-    
+        print action_output.min(), action_output.max()
 
 #        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, -1)#self.num_agents)
-        mem_mm_delta = mem_mm_delta.contiguous().view(-1, self.memory_size, self.num_agents)
+        # mem_mm_delta = mem_mm_delta.contiguous().view(self.minibatch_size, -1, self.memory_size, self.num_agents)
+        mem_mm_delta = mem_mm_delta.contiguous().view(self.memory_size, self.num_agents, self.num_agents, -1)
+        mem_mm_delta = mem_mm_delta.transpose(3, 2)
+        mem_mm_delta = mem_mm_delta.transpose(2, 1)
+        mem_mm_delta = mem_mm_delta.transpose(0, 1)
+        mem_mm_delta = mem_mm_delta.transpose(1,2)
+        mem_mm_delta = mem_mm_delta.transpose(2,3)
+        # mem_delta = mem_mm_delta.transpose()
+        # mem_mm_delta = mem_mm_delta.contiguous().view(self.minibatch_size, self.memory_size, self.num_agents, -1)
+        # mem_mm_delta = mem_mm_delta.transpose(3,2)
+        # mem_mm_delta = mem_mm_delta.transpose(2,1)
+        # mem_mm_delta = mem_mm_delta.transpose(2,3)
+
+
         temp_comm_output = self.gumbel_softmax(psi_c)
         if is_training:
             communication_output = self.gumbel_softmax(psi_c)
@@ -188,23 +230,31 @@ class agent(nn.Module):
             if self.use_cuda:
                 M_eps = M_eps.cuda()
                 m_eps = m_eps.cuda()
+<<<<<<< HEAD
             print mem_mm_delta
             assert False
             M = self.tanh(M + mem_delta + M_eps).transpose(1, 2)
             m = self.tanh(m + mem_delta + M_eps).transpose(0, 1)
+=======
+            # print M, mem_mm_delta, M_eps
+            # print self.tanh(M + mem_mm_delta + M_eps)
+            M = self.tanh(M + mem_mm_delta + M_eps).transpose(2, 3)
+            m = self.tanh(m + mem_delta + M_eps).transpose(1, 2)
+>>>>>>> 299bb407f9e7e527c5ea08597575c0ed7328ef46
         
         else:
-            M = self.tanh(M.transpose(1,2) + mem_mm_delta)
-            m = self.tanh(m + mem_delta).transpose(0,1)
+            M = self.tanh(M.transpose(2,3) + mem_mm_delta)
+            m = self.tanh(m + mem_delta).transpose(1,2)
 
         # M = self.tanh(M.transpose(1,2) + mem_mm_delta)
         # m = self.tanh(m + mem_delta).transpose(0,1)
 
         #transposing because we have to i think
         #I really need to check to make sure math stuff works
-        action_output = action_output.transpose(0,1)
-        communication_output = communication_output.transpose(0,1)
+        action_output = action_output.transpose(1,2)
+        communication_output = communication_output.transpose(1,2)
        
+        #print action_output, communication_output, M, m, goal_out
         return action_output, communication_output, M, m, goal_out
 
     '''

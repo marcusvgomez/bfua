@@ -14,19 +14,21 @@ STATE_DIM = 6# 2(for position) + 2(for velocity) + 2(for gaze) + NO(1(for color)
 ACTION_DIM = 4 # 2 (for velocity) + 2(for gaze)
 
 class env:
-    def __init__(self, num_agents, num_landmarks, timestep=0.1, damping_coef=0.5, is_cuda = False):
+    def __init__(self, num_agents, num_landmarks, timestep=0.1, damping_coef=0.5, is_cuda = False, minibatch_size=1024, num_gpus = 2):
         self.num_agents = num_agents
         self.num_landmarks = num_landmarks
         self.timestep = timestep #delta t
         self.damping_coef = damping_coef # this is 1 - gamma
         self.gamma = 1 - self.damping_coef
-        self.world_state_agents = torch.FloatTensor(STATE_DIM, self.num_agents).zero_()
+        self.world_state_agents = torch.FloatTensor(minibatch_size, STATE_DIM, self.num_agents).zero_()
+        self.minibatch_size = minibatch_size
+        self.num_gpus = 2
         ##agent 0 is at (0,0)
-        self.world_state_agents[0,1] = 10.0 ##init agent 1 at (10,10) 
-        self.world_state_agents[1,1] = 10.0
-        self.world_state_agents[0,2] = -10.0
-        self.world_state_agents[1,2] = -10.0
-        self.world_state_landmarks = torch.FloatTensor(STATE_DIM, self.num_landmarks).zero_()
+        self.world_state_agents[:,0,1] = 10.0 ##init agent 1 at (10,10) 
+        self.world_state_agents[:,1,1] = 10.0
+        self.world_state_agents[:,0,2] = -10.0
+        self.world_state_agents[:,1,2] = -10.0
+        self.world_state_landmarks = torch.FloatTensor(minibatch_size, STATE_DIM, self.num_landmarks).zero_()
 
         
         ## this probably shouldn't be hardcoded but...whatever
@@ -62,7 +64,18 @@ class env:
 
     ##this is literally horrible design
     def expose_world_state(self): return self.world_state_agents, self.world_state_landmarks
-
+    
+    def expose_world_state_extended(self):
+        # returns a version of the agents world state that is duplicated to be (STATE_DIM * NUM_AGENTS) by NUM_AGENTS to serve as the observations of all of the agents
+        total_state = torch.FloatTensor(self.minibatch_size, STATE_DIM * self.num_agents, self.num_agents).zero_()
+        # bad but not sure if pytorch has convenient reshaping tools to do this
+        for c in range(self.num_agents):
+            agent_state = self.world_state_agents[:, c].data
+            for r in range(self.num_agents):
+                total_state[:, STATE_DIM*r:STATE_DIM*(r+1), c] = self.world_state_agents[:, :, r].data
+        return total_state
+        
+    
     ##actions should be a 6 X N tensor
     ##returns a 12(N+M) x N tensor
     def forward(self, actions):
@@ -70,14 +83,16 @@ class env:
         R = torch.matmul(self.transform_R, actions)
         self.world_state_agents = L + R
         #self.world_state_agents[0:2,:] = torch.clamp(self.world_state_agents[0:2,:], -10.0, 10.0)
-        result = torch.FloatTensor(STATE_DIM*(self.num_agents + self.num_landmarks), self.num_agents)
+        result = torch.FloatTensor(self.minibatch_size, STATE_DIM*(self.num_agents + self.num_landmarks), self.num_agents)
         for i in range(self.num_agents):
-            row = torch.FloatTensor(STATE_DIM*(self.num_agents + self.num_landmarks))
+            row = torch.FloatTensor(self.minibatch_size, STATE_DIM*(self.num_agents + self.num_landmarks))
             for j in range(self.num_agents):
-                row[STATE_DIM*j:STATE_DIM*(j+1)] = self.world_state_agents.data[:,j] 
+                # print self.world_state_agents.data[:,:,j]
+                # print self.world_state_agents.data
+                row[:,STATE_DIM*j:STATE_DIM*(j+1)] = self.world_state_agents.data[:,:,j] 
             offset = STATE_DIM*self.num_agents
             for j in range(self.num_landmarks):
-                row[offset + STATE_DIM*j: offset + STATE_DIM*(j+1)] = self.world_state_landmarks.data[:,j]
+                row[:,offset + STATE_DIM*j: offset + STATE_DIM*(j+1)] = self.world_state_landmarks.data[:,:,j]
 
             """
             for j in range(self.num_agents):
@@ -99,6 +114,6 @@ class env:
 		##color is constant and not relative
                 row[offset + STATE_DIM*j + 6] = self.world_state_landmarks[6,j]
             """
-            result[:,i] = row
+            result[:,:,i] = row
         return Variable(result, requires_grad = True)
         

@@ -138,20 +138,23 @@ def main():
         save_loss = float("inf")
         # for epoch in range(runtime_config.n_epochs):
         # for epoch in range(int(1e6)):
-        episode_per_epoch = 1024
         total_loss = 0.
         for epoch in range(1000):
             # for param in controller.agent_trainable.parameters():
                 # print param
 
             episode_loss = []
-            for _ in range(episode_per_epoch):
-                controller.reset() #resetting the controller
+            controller.reset()
+            controller.run(10, is_training = True)
+            total_loss = controller.compute_loss()
+            episode_loss.append(total_loss.data[0])
+            # for _ in range(episode_per_epoch):
+                # controller.reset() #resetting the controller
                 # controller.run(runtime_config.time_horizon)
-                controller.run(10, is_training = True)
-                curr_loss = controller.compute_loss()
-                total_loss += curr_loss
-                episode_loss.append(curr_loss.data[0])
+                # controller.run(10, is_training = True)
+                # curr_loss = controller.compute_loss()
+                # total_loss += curr_loss
+                # episode_loss.append(curr_loss.data[0])
 
             epoch_loss = np.array(episode_loss).mean()
             print "EPOCH IS: ", epoch, epoch_loss
@@ -165,18 +168,18 @@ def main():
 
             #only runs if we are using optimizer decay
             # if total_loss.data[0] < max_loss and args.optimizer_decay:
-            if curr_loss.data[0] > min_loss:
+            if total_loss.data[0] > min_loss:
                 not_improved += 1
                 if not_improved > 250:
                     max_loss = total_loss
                     optimizer = updateOptimizer(optimizer, runtime_config.optimizer_decay_rate)
                     not_improved = 0
             else:
-                min_loss = min(min_loss, total_loss.data[0])
+                min_loss = min(min_loss, total_loss.data[0])#total_loss.data[0])
                 not_improved = 0
 
             optimizer.zero_grad()
-            total_loss /= episode_per_epoch
+            # total_loss /= episode_per_epoch
             total_loss.backward()
             optimizer.step()
             del total_loss

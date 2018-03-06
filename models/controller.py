@@ -42,6 +42,9 @@ class Controller():
         self.hidden_output_size = runtime_config.hidden_output_size
         self.comm_output_size = runtime_config.comm_output_size
         self.input_output_size = runtime_config.input_output_size
+        self.minibatch_size = runtime_config.minibatch_size
+
+        self.num_gpus = runtime_config.num_gpus
 
 
         self.dirichlet_alpha = runtime_config.dirichlet_alpha
@@ -71,14 +74,20 @@ class Controller():
         # own reference frame. TODO: probably not N+M for observations of all other objects
         # maybe X can just be a tensor and not a variable since it's not being trained
         # can X get its initial value from env?
+        #self.X = Variable(torch.zeros(self.minibatch_size, STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
 
+<<<<<<< HEAD
         self.X = self.env.world_state_agents
         # self.X = Variable(torch.randn(STATE_DIM*(self.N+self.M), self.N).type(dtype), requires_grad=True)
+=======
+        #self.X = self.env.world_state_agents
+        self.X = Variable(self.env.expose_world_state_extended(), requires_grad=True)
+>>>>>>> 299bb407f9e7e527c5ea08597575c0ed7328ef46
         
-        self.C = Variable(torch.zeros(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
+        self.C = Variable(torch.zeros(self.minibatch_size, self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         self.G_loss = 0.0 
         # create memory bank Tensors??
-        self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
+        self.Mem = Variable(torch.zeros(self.minibatch_size, self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
         
         # create goals
         self.G = self.specify_goals()
@@ -88,13 +97,14 @@ class Controller():
         # keeps track of the utterances 
 
         #TODO: Need to properly implement memory
-        self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype), requires_grad = True)
-        self.comm_counts = Variable(torch.zeros(self.K).type(dtype), requires_grad = True)
+        self.mem = Variable(torch.zeros(self.minibatch_size, self.memory_size, self.N).type(dtype), requires_grad = True)
+        self.comm_counts = Variable(torch.zeros(self.minibatch_size, self.K).type(dtype), requires_grad = True)
         
         if runtime_config.use_cuda:
             print "running cuda"
-            self.agent_trainable.cuda()
+            # self.agent_trainable.cuda()
             self.comm_counts = self.comm_counts.cuda()
+            self.agent_trainable = torch.nn.DataParallel(self.agent_trainable, device_ids = [0,1]).cuda()
 
         print "running deterministic goals: ", self.deterministic_goals
         
@@ -107,18 +117,22 @@ class Controller():
     
     def reset(self):
         del self.physical_losses[:]
-        self.env.clear()
+        # self.env.clear()
         del self.G
         self.G_loss = 0.0
 
-        self.env = env(num_agents=self.N, num_landmarks=self.M, is_cuda=self.runtime_config.use_cuda)
-        self.Mem = Variable(torch.zeros(self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
-        self.mem = Variable(torch.zeros(self.memory_size, self.N).type(dtype), requires_grad = True)
+        #self.env = env(num_agents=self.N, num_landmarks=self.M, is_cuda=self.runtime_config.use_cuda)
+        #self.Mem = Variable(torch.zeros(self.minibatch_size, self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
+        #self.mem = Variable(torch.zeros(self.minibatch_size, self.memory_size, self.N).type(dtype), requires_grad = True)
+        
+        self.X = Variable(self.env.expose_world_state_extended(), requires_grad = True)
+        self.Mem = Variable(torch.zeros(self.minibatch_size, self.N, self.memory_size, self.N).type(dtype), requires_grad = True)
+        self.mem = Variable(torch.zeros(self.minibatch_size, self.memory_size, self.N).type(dtype), requires_grad = True)
         self.G = self.specify_goals()
         
         self.physical_losses = []
-        self.comm_counts = torch.zeros(self.K).type(dtype)
-        self.C = Variable(torch.zeros(self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
+        self.comm_counts = torch.zeros(self.minibatch_size, self.K).type(dtype)
+        self.C = Variable(torch.zeros(self.minibatch_size, self.K, self.N).type(dtype), requires_grad=True) # communication. one hot
         if self.runtime_config.use_cuda:
             self.Mem = self.Mem.cuda()
             self.mem = self.mem.cuda()
@@ -131,12 +145,13 @@ class Controller():
     def update_prediction_loss(self, predictions):
         goals = self.G ## goal x N
         ret = 0.0
-        for i in range(self.N):
-            for j in range(self.N):
-                if i == j: continue
-                i_prediction_j = predictions[i,:,j]
-                j_true = goals[:,j]
-                ret += torch.norm(i_prediction_j - j_true)
+        for k in range(self.minibatch_size):
+            for i in range(self.N):
+                for j in range(self.N):
+                    if i == j: continue
+                    i_prediction_j = predictions[k,i,:,j]
+                    j_true = goals[k,:,j]
+                    ret += torch.norm(i_prediction_j - j_true)
         self.G_loss =  -1.0 * ret
     
     def compute_prediction_loss(self): return self.G_loss
@@ -169,31 +184,28 @@ class Controller():
         # Goals are formatted as 6-dim vectors: [one hot action selection, location coords, agent] (3 + 2 + 1)
         # Otherwise, randomly generate one
         
-        goals = torch.FloatTensor(GOAL_DIM, self.N).zero_()
+        goals = torch.FloatTensor(self.minibatch_size,GOAL_DIM, self.N).zero_()
         if self.deterministic_goals:
-            # ACTUALLY rn agent 0 is just doing to do nothing. simplest case for now. agent 0's old goal is to get agent 1 to go to (5, 5)
-            # goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 1])
-            # # ACTUALLY rn agent 1 goal is also to do nothing. agent 1's old goal is to get agent 0 to look UP at (0, 1)
-            # goals[:, 1] = torch.FloatTensor([0, 0, 1, 0, 1, 0])
             #agent 0's goal is to get agent 1 to go to (5,5)
-            goals[:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 1])
+            goals[:,:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 0])
             #agent 1's goal is to get agent 0 to look UP at (0,1)
-            goals[:, 1] = torch.FloatTensor([0, 1, 0, 5, -5, 0])
+            goals[:,:, 1] = torch.FloatTensor([0, 1, 0, 5, -5, 1])
             # agent 2's goal is to send itself to (-5, -5)
-            goals[:, 2] = torch.FloatTensor([0, 0, 1, -5, -5, 2])
+            goals[:,:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
             # the rest just do nothing
             for i in range(3, self.N):
-                goals[2, i] = 1
+                goals[:,2, i] = 1
         else:
-            for i in range(self.N):
-                action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
-                x, y = np.random.uniform(-20.0, 20.0, size=(2,)) # TODO: have clearer bounds in env so these coordinates mean something
-                target_agent = np.random.randint(0, self.N)
+            for j in range(self.minibatch_size):
+                for i in range(self.N):
+                    action_type = np.random.randint(0, 3) # either go-to, look-at, or do-nothing
+                    x, y = np.random.uniform(-20.0, 20.0, size=(2,)) # TODO: have clearer bounds in env so these coordinates mean something
+                    target_agent = np.random.randint(0, self.N)
             
-                goals[action_type,i] = 1
-                goals[3,i] = x
-                goals[4,i] = y
-                goals[5,i] = target_agent
+                    goals[j,action_type,i] = 1
+                    goals[j,3,i] = x
+                    goals[j,4,i] = y
+                    goals[j,5,i] = target_agent
 
         return Variable(goals.type(dtype), requires_grad = True)
     
@@ -201,8 +213,7 @@ class Controller():
         # update counts for each communication utterance.
         # interpolated as a float for differentiability, used in comm_reward 
 
-        comms = torch.sum(self.C, dim=1)
-        # print comms, self.comm_counts
+        comms = torch.sum(self.C, dim=2)
         if is_training:
             self.comm_counts += comms.data
         else:
@@ -212,32 +223,39 @@ class Controller():
         world_state_agents, world_state_landmarks = self.env.expose_world_state()
         goals = self.G ## GOAL_DIM x N
         loss_t = 0.0
+        #print "ACTIONS ARE: ", actions
+        #print "min is: ", actions.min(), actions.max()
         # loss_t = Variable(torch.FloatTensor([0.]))
-        for i in range(self.N):
-            # if i != 2: continue
-            g_a_i = goals[:,i]
-            g_a_r = int(g_a_i[GOAL_DIM - 1].data[0])
-            r_bar = g_a_i[3:5]
-            ## GOTO action
-            if g_a_i.data[0] == 1:
-                p_t_r = world_state_agents[:,g_a_r][0:2]
+        for j in range(self.minibatch_size):
+            for i in range(self.N):
+                # if i != 2: continue
+                g_a_i = goals[j, :,i]
+                g_a_r = int(g_a_i[GOAL_DIM - 1].data[0])
+                r_bar = g_a_i[3:5]
+                ## GOTO action
+                if g_a_i.data[0] == 1:
+                    p_t_r = world_state_agents[:,g_a_r][0:2]
+                    try:
+                        loss_t += ((p_t_r - r_bar).norm(2))**2
+                    except RuntimeError as e:
+                        pass
+                        # print "FUCK", p_t_r, r_bar
+                #GAZE action
+                elif g_a_i.data[1] == 1: 
+                    v_t_r = world_state_agents[:,g_a_r][4:6]
+                    try:
+                        loss_t += ((v_t_r - r_bar).norm(2))**2
+                    except RuntimeError as e:
+                        pass
+                        # print "FUCK", v_t_r, 
+                u_i_t = actions[j, :,i]
+                c_i_t = self.C[j, :,i]
+                # print u_i_t, c_i_t
                 try:
-                    loss_t += ((p_t_r - r_bar).norm(2))**2
+                    loss_t += u_i_t.norm(2) * 0.005
                 except RuntimeError as e:
-                    pass
-                    # print "FUCK", p_t_r, r_bar
-            #GAZE action
-            elif g_a_i.data[1] == 1: 
-                v_t_r = world_state_agents[:,g_a_r][4:6]
-                try:
-                    loss_t += ((v_t_r - r_bar).norm(2))**2
-                except RuntimeError as e:
-                    pass
-                    # print "FUCK", v_t_r, 
-            u_i_t = actions[:,i]
-            c_i_t = self.C[:,i]
-            loss_t += u_i_t.norm(2) * 0.005
-            loss_t += c_i_t.norm(2) * 0.005
+                    assert False
+                loss_t += c_i_t.norm(2) * 0.005
         loss_t *= -1.0
         self.physical_losses.append(loss_t)
 
@@ -251,7 +269,9 @@ class Controller():
             self.mem = self.mem.cuda()
 
 
+        # print self.X
         actions, cTemp, MemTemp, memTemp, goal_out = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
+
         self.update_phys_loss(actions)
 
         #not sure where 
@@ -272,14 +292,14 @@ class Controller():
         self.update_prediction_loss(goal_out)
         self.update_comm_counts(is_training= is_training)
         # if debug and self.GLOBAL_ITER % 100 == 0: print actions
-        if debug: print actions
+        # if debug: print actions
     
     def run(self, t, is_training):
         # self.GLOBAL_ITER += 1
         # print self.GLOBAL_ITER
         for iter_ in range(t):
     #        print self.img_dir
-            print self.env.expose_world_state()[0]
+            # print self.env.expose_world_state()[0]
             if iter_ == t - 1: 
                 # if self.GLOBAL_ITER % 100 == 99:
                     # print self.env.expose_world_state()[0]
