@@ -178,7 +178,7 @@ class agent(nn.Module):
             action_output = psi_u + epsilon_noise
         else:
             action_output = psi_u
-        print action_output.min(), action_output.max()
+        #print action_output.min(), action_output.max()
 
 #        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, -1)#self.num_agents)
         # mem_mm_delta = mem_mm_delta.contiguous().view(self.minibatch_size, -1, self.memory_size, self.num_agents)

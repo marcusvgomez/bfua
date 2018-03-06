@@ -99,7 +99,7 @@ class Controller():
             print "running cuda"
             # self.agent_trainable.cuda()
             self.comm_counts = self.comm_counts.cuda()
-            self.agent_trainable = torch.nn.DataParallel(self.agent_trainable, device_ids = [0,1]).cuda()
+            self.agent_trainable = torch.nn.DataParallel(self.agent_trainable, device_ids = [0]).cuda()
 
         print "running deterministic goals: ", self.deterministic_goals
         
