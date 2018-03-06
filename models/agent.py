@@ -63,6 +63,8 @@ class agent(nn.Module):
         else:
           self.goal_dim = 0
 
+        # dropout_prob = 0.0
+
         # print ("vocab size is: ", self.vocab_size + input_size)
 
 
@@ -124,7 +126,6 @@ class agent(nn.Module):
         X = X.repeat(1, self.num_agents, 1, 1)
 
         C = C.transpose(0, 1)
-
 
         # print M, C, X, g, m
 
