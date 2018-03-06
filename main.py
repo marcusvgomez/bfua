@@ -44,7 +44,7 @@ def getTime():
 
 save_path = '/cvgl2/u/bcui/cs234/results/'
 # model_name = 'communication_vision_non_adversarial'
-model_name = 'vis_no_comm_no_noise'
+model_name = 'full_experiment_minibatch'
 currTime = getTime()
 print currTime
 save_model_name = save_path + model_name + " date " + currTime + ".pt"
@@ -138,15 +138,18 @@ def main():
         save_loss = float("inf")
         # for epoch in range(runtime_config.n_epochs):
         # for epoch in range(int(1e6)):
+        minibatch_size = 1024
         total_loss = 0.
-        for epoch in range(1000):
+        for epoch in range(2500):
             # for param in controller.agent_trainable.parameters():
                 # print param
+                # break
 
             episode_loss = []
             controller.reset()
             controller.run(10, is_training = True)
-            total_loss = controller.compute_loss()
+            total_loss = controller.compute_loss()/minibatch_size
+            # print "TOTAL LOSS IS: ", total_loss
             episode_loss.append(total_loss.data[0])
             # for _ in range(episode_per_epoch):
                 # controller.reset() #resetting the controller
@@ -162,9 +165,9 @@ def main():
 
             loss.append(epoch_loss)
 
-            # if epoch % 50 == 0:
-            #      save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
-            #      save_loss = min(save_loss, total_loss.data[0])
+            if epoch % 50 == 0:
+                 save_model(controller.agent_trainable, optimizer, epoch, min_loss, is_best = total_loss.data[0] < save_loss)
+                 save_loss = min(save_loss, total_loss.data[0])
 
             #only runs if we are using optimizer decay
             # if total_loss.data[0] < max_loss and args.optimizer_decay:
@@ -184,6 +187,10 @@ def main():
             optimizer.step()
             del total_loss
             total_loss = 0.
+            # for param in controller.agent_trainable.parameters():
+                # print param
+                # break
+            # assert False
 
 
 

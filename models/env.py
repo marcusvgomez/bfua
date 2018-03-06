@@ -20,15 +20,20 @@ class env:
         self.timestep = timestep #delta t
         self.damping_coef = damping_coef # this is 1 - gamma
         self.gamma = 1 - self.damping_coef
-        self.world_state_agents = torch.FloatTensor(minibatch_size, STATE_DIM, self.num_agents).zero_()
         self.minibatch_size = minibatch_size
         self.num_gpus = 2
+        self.is_cuda = is_cuda
+        self.initialize_state()
+
+
+    def initialize_state(self):
+        self.world_state_agents = torch.FloatTensor(self.minibatch_size, STATE_DIM, self.num_agents).zero_()
         ##agent 0 is at (0,0)
         self.world_state_agents[:,0,1] = 10.0 ##init agent 1 at (10,10) 
         self.world_state_agents[:,1,1] = 10.0
         self.world_state_agents[:,0,2] = -10.0
         self.world_state_agents[:,1,2] = -10.0
-        self.world_state_landmarks = torch.FloatTensor(minibatch_size, STATE_DIM, self.num_landmarks).zero_()
+        self.world_state_landmarks = torch.FloatTensor(self.minibatch_size, STATE_DIM, self.num_landmarks).zero_()
 
         
         ## this probably shouldn't be hardcoded but...whatever
@@ -47,11 +52,11 @@ class env:
         self.world_state_landmarks = Variable(self.world_state_landmarks, requires_grad = True)
 
 
-	if is_cuda:
-		self.transform_L = self.transform_L.cuda()
-		self.transform_R = self.transform_R.cuda()
-		self.world_state_agents = self.world_state_agents.cuda()
-		self.world_state_landmarks = self.world_state_landmarks.cuda()
+        if self.is_cuda:
+            self.transform_L = self.transform_L.cuda()
+            self.transform_R = self.transform_R.cuda()
+            self.world_state_agents = self.world_state_agents.cuda()
+            self.world_state_landmarks = self.world_state_landmarks.cuda()
 
     def modify_world_state(self, agents, landmarks):
         pass
@@ -61,19 +66,20 @@ class env:
         del self.transform_R
         del self.world_state_agents
         del self.world_state_landmarks
+        self.initialize_state()
 
     ##this is literally horrible design
     def expose_world_state(self): return self.world_state_agents, self.world_state_landmarks
     
     def expose_world_state_extended(self):
         # returns a version of the agents world state that is duplicated to be (STATE_DIM * NUM_AGENTS) by NUM_AGENTS to serve as the observations of all of the agents
-        total_state = torch.FloatTensor(self.minibatch_size, STATE_DIM * self.num_agents, self.num_agents).zero_()
+        self.total_state = torch.FloatTensor(self.minibatch_size, STATE_DIM * self.num_agents, self.num_agents).zero_()
         # bad but not sure if pytorch has convenient reshaping tools to do this
         for c in range(self.num_agents):
             agent_state = self.world_state_agents[:, c].data
             for r in range(self.num_agents):
-                total_state[:, STATE_DIM*r:STATE_DIM*(r+1), c] = self.world_state_agents[:, :, r].data
-        return total_state
+                self.total_state[:, STATE_DIM*r:STATE_DIM*(r+1), c] = self.world_state_agents[:, :, r].data
+        return self.total_state
         
     
     ##actions should be a 6 X N tensor

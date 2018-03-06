@@ -63,6 +63,8 @@ class agent(nn.Module):
         else:
           self.goal_dim = 0
 
+        # dropout_prob = 0.0
+
         # print ("vocab size is: ", self.vocab_size + input_size)
 
 
@@ -131,7 +133,6 @@ class agent(nn.Module):
 =======
 >>>>>>> 299bb407f9e7e527c5ea08597575c0ed7328ef46
 
-
         # print M, C, X, g, m
 
         communication_input = torch.cat([C, M], 3) #concatenate along the first direction
@@ -193,7 +194,6 @@ class agent(nn.Module):
             action_output = psi_u + epsilon_noise
         else:
             action_output = psi_u
-        print action_output.min(), action_output.max()
 
 #        mem_mm_delta = mem_mm_delta.view(self.num_agents, self.memory_size, -1)#self.num_agents)
         # mem_mm_delta = mem_mm_delta.contiguous().view(self.minibatch_size, -1, self.memory_size, self.num_agents)

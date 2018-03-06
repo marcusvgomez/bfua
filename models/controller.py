@@ -104,7 +104,8 @@ class Controller():
             print "running cuda"
             # self.agent_trainable.cuda()
             self.comm_counts = self.comm_counts.cuda()
-            self.agent_trainable = torch.nn.DataParallel(self.agent_trainable, device_ids = [0,1]).cuda()
+            self.agent_trainable = torch.nn.DataParallel(self.agent_trainable, device_ids = [0])
+            self.agent_trainable = self.agent_trainable.cuda()
 
         print "running deterministic goals: ", self.deterministic_goals
         
@@ -117,7 +118,7 @@ class Controller():
     
     def reset(self):
         del self.physical_losses[:]
-        # self.env.clear()
+        self.env.clear()
         del self.G
         self.G_loss = 0.0
 
@@ -187,11 +188,11 @@ class Controller():
         goals = torch.FloatTensor(self.minibatch_size,GOAL_DIM, self.N).zero_()
         if self.deterministic_goals:
             #agent 0's goal is to get agent 1 to go to (5,5)
-            goals[:,:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 0])
+            goals[:,:, 0] = torch.FloatTensor([0, 0, 1, 5, 5, 0]).repeat(self.minibatch_size, 1)
             #agent 1's goal is to get agent 0 to look UP at (0,1)
-            goals[:,:, 1] = torch.FloatTensor([0, 1, 0, 5, -5, 1])
+            goals[:,:, 1] = torch.FloatTensor([0, 1, 0, 5, -5, 0]).repeat(self.minibatch_size, 1)
             # agent 2's goal is to send itself to (-5, -5)
-            goals[:,:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 2])
+            goals[:,:, 2] = torch.FloatTensor([1, 0, 0, -5, -5, 1]).repeat(self.minibatch_size, 1)
             # the rest just do nothing
             for i in range(3, self.N):
                 goals[:,2, i] = 1
@@ -226,6 +227,7 @@ class Controller():
         #print "ACTIONS ARE: ", actions
         #print "min is: ", actions.min(), actions.max()
         # loss_t = Variable(torch.FloatTensor([0.]))
+        # print world_state_agents
         for j in range(self.minibatch_size):
             for i in range(self.N):
                 # if i != 2: continue
@@ -233,17 +235,20 @@ class Controller():
                 g_a_r = int(g_a_i[GOAL_DIM - 1].data[0])
                 r_bar = g_a_i[3:5]
                 ## GOTO action
+                # print g_a_i, g_a_r, g_a_i.data[0]
                 if g_a_i.data[0] == 1:
-                    p_t_r = world_state_agents[:,g_a_r][0:2]
+                    p_t_r = world_state_agents[j,:,g_a_r][0:2]
                     try:
+                        # print "goto", p_t_r, r_bar
                         loss_t += ((p_t_r - r_bar).norm(2))**2
                     except RuntimeError as e:
                         pass
                         # print "FUCK", p_t_r, r_bar
                 #GAZE action
                 elif g_a_i.data[1] == 1: 
-                    v_t_r = world_state_agents[:,g_a_r][4:6]
+                    v_t_r = world_state_agents[j,:,g_a_r][4:6]
                     try:
+                        # print "gaze", v_t_r, r_bar
                         loss_t += ((v_t_r - r_bar).norm(2))**2
                     except RuntimeError as e:
                         pass
@@ -256,6 +261,8 @@ class Controller():
                 except RuntimeError as e:
                     assert False
                 loss_t += c_i_t.norm(2) * 0.005
+            # print "LOSS IS", loss_t
+            # assert False
         loss_t *= -1.0
         self.physical_losses.append(loss_t)
 
@@ -269,7 +276,6 @@ class Controller():
             self.mem = self.mem.cuda()
 
 
-        # print self.X
         actions, cTemp, MemTemp, memTemp, goal_out = self.agent_trainable((self.X, self.C, self.G, self.Mem, self.mem, is_training))
 
         self.update_phys_loss(actions)
@@ -302,7 +308,7 @@ class Controller():
             # print self.env.expose_world_state()[0]
             if iter_ == t - 1: 
                 # if self.GLOBAL_ITER % 100 == 99:
-                    # print self.env.expose_world_state()[0]
+                # print self.env.expose_world_state()[0]
                 self.step(debug=True, is_training = is_training)
             else:
                 self.step(is_training = is_training)
@@ -310,7 +316,7 @@ class Controller():
             
             # visualize every 10 time steps
             # if self.GLOBAL_ITER % 10 == 0 and self.GLOBAL_ITER%10240 < 100:
-            #     draw(self.env.world_state_agents, name=self.img_dir + 'vis'+str(self.GLOBAL_ITER)+ '_' + '.png')
+                # draw(self.env.world_state_agents, name=self.img_dir + 'vis'+str(self.GLOBAL_ITER)+ '_' + '.png')
         # if self.GLOBAL_ITER == 10000:
             # assert False
 
